@@ -1,6 +1,6 @@
 * Component by Agustin Gullino, Electronics Engineering Student at ITBA
 * email: agullino@itba.edu.ar
 
-.subckt Ideal_Comp C+ C- Out PARAMS: amp=1 offset=0
+.subckt Comp_ideal C+ C- Out PARAMS: amp=1 offset=0
 B1 Out 0 V={amp}*sgn(V(C+,C-))+{offset}
-.ends Ideal_Comp
+.ends Comp_ideal
