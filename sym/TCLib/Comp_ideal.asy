@@ -10,10 +10,11 @@ LINE Normal -157 64 -174 64
 LINE Normal -157 32 -157 64
 LINE Normal -140 32 -157 32
 WINDOW 0 -113 80 Left 2
-SYMATTR ModelFile TCLib/Ideal_comp.lib
+SYMATTR ModelFile TCLib/Comp_ideal.lib
 SYMATTR Prefix X
 SYMATTR Value amp=1
 SYMATTR Value2 offset=0
+SYMATTR SpiceModel Comp_ideal
 PIN -192 80 NONE 0
 PINATTR PinName C+
 PINATTR SpiceOrder 1
