@@ -11,7 +11,7 @@
 *                |   |   |   |   |
 .SUBCKT OA_Signal 1   2   3   4   5
 R1 1 2 {ri}
-E1 N001 0 2 1 {A}
+E1 N001 0 2 1 {Ao}
 R2 N001 5 {ro}
 .ends OA_Signal
 *

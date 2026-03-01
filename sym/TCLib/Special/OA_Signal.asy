@@ -38,14 +38,14 @@ TEXT 121 -25 Left 2 ro
 TEXT 42 -25 Left 2 ri
 TEXT 7 -76 Left 2 +
 TEXT 11 70 Left 2 -
-TEXT 109 40 Left 2 A.e
+TEXT 109 40 Left 1 Ao.e
 WINDOW 0 63 119 Left 2
 WINDOW 3 176 64 Left 1
 WINDOW 123 176 87 Left 1
 WINDOW 39 176 112 Left 1
 SYMATTR Value ri=10k
 SYMATTR Value2 ro=100
-SYMATTR SpiceLine A=1k
+SYMATTR SpiceLine Ao=1k
 SYMATTR SpiceModel OA_Signal
 SYMATTR ModelFile TCLib/OA_Signal.lib
 SYMATTR Prefix X
