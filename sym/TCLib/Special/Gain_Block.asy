@@ -3,8 +3,8 @@ SymbolType CELL
 LINE Normal -176 0 -80 48
 LINE Normal -80 48 -176 96
 LINE Normal -176 0 -176 96
-WINDOW 3 -159 48 Left 1
-SYMATTR Value K = 10
+WINDOW 3 -163 48 Left 1
+SYMATTR Value K=10
 SYMATTR SpiceModel Gain_Block
 SYMATTR ModelFile TCLib/Gain_Block.lib
 SYMATTR Prefix X

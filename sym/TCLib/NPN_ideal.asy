@@ -7,17 +7,16 @@ LINE Normal 40 80 16 64
 LINE Normal 16 80 16 16
 LINE Normal 16 32 64 0
 LINE Normal 16 48 0 48
-WINDOW 0 64 16 Left 0
-WINDOW 3 64 36 Left 1
-WINDOW 123 64 56 Left 0
-WINDOW 39 64 73 Left 0
+WINDOW 3 64 28 Left 1
+WINDOW 123 64 48 Left 0
+WINDOW 39 64 65 Left 0
 SYMATTR Value hfe=100
 SYMATTR Value2 Vbe=.7
+SYMATTR SpiceLine Vce_sat=.3
 SYMATTR Prefix X
 SYMATTR SpiceModel NPN_nice
 SYMATTR ModelFile TCLib/npn_ideal.lib
 SYMATTR Description Ideal Bipolar NPN transistor, handle with care. Created by Javier Petrucci and Agustin Gullino (ITBA)
-SYMATTR SpiceLine Vce_sat=.3
 PIN 64 0 NONE 0
 PINATTR PinName C
 PINATTR SpiceOrder 1
