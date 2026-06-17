@@ -28,4 +28,6 @@
 !/sym/cap.asy
 !/sym/ind.asy
 !/sym/voltage2.asy
+!/sym/nm-nobulk.asy
+!/sym/pm-nobulk.asy
 # overrides the ugly spring shaped resistor
