@@ -1,14 +1,11 @@
 Version 4
 SymbolType CELL
-LINE Normal 48 48 48 96
-LINE Normal 16 80 48 80
-LINE Normal 16 48 24 48
-LINE Normal 48 48 24 44
-LINE Normal 48 48 24 52
-LINE Normal 24 44 24 52
-LINE Normal 16 8 16 24
-LINE Normal 16 40 16 56
-LINE Normal 16 72 16 88
+LINE Normal 48 80 48 96
+LINE Normal 48 80 40 80
+LINE Normal 16 80 40 84
+LINE Normal 16 80 40 76
+LINE Normal 40 84 40 76
+LINE Normal 16 8 16 88
 LINE Normal 0 80 8 80
 LINE Normal 8 16 8 80
 LINE Normal 48 16 16 16
