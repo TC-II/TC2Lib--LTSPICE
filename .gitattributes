@@ -1,2 +1,10 @@
 # Auto detect text files and perform LF normalization
 * text=auto
+
+# Los archivos de prueba se comparan byte a byte: git no debe tocarles los
+# finales de linea ni la codificacion.
+tests/data/** -text
+
+# Binarios distribuidos
+/TCLib.exe binary
+/TCLib binary

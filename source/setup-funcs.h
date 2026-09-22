@@ -11,28 +11,34 @@
 
 #endif
 
-#include <string>
+#include <cstddef>
 #include <iostream>
-#include <fstream>
-#include <sstream>
-#include <deque>
-#include <cstdio>
+#include <string>
 
-// Function declarations
+/// Resuelve las rutas de LTspice y verifica que esten los archivos del patcher.
+/// Devuelve false y explica el motivo si no se puede seguir.
 bool initLib();
-void doTheThing();
-void setDarkTheme();
-void setLightTheme();
-void loadCustomComponents();
-void loadCustomBackground();
-void setPenWidth();
-void setShortcuts();
 
-int music();
-void print_menu(int, std::string);
-void printWeather();
-void color(std::string);
-void clear_screen();
-int hasResources();
+/// Cantidad de opciones del menu. La tabla vive en setup-funcs.cpp: esta es la
+/// unica fuente de verdad para navegarlo.
+std::size_t menuLength();
+
+/// Dibuja el menu con la opcion `selected` resaltada y el resultado de la
+/// ultima accion.
+void printMenu(std::size_t selected, const std::string &lastOperation);
+
+/// Ejecuta la opcion `selected`, deja en `lastOperation` el mensaje a mostrar y
+/// devuelve false si el usuario eligio salir.
+bool runMenuOption(std::size_t selected, std::string &lastOperation);
+
+void clearScreen();
+
+/// true si el directorio del ejecutable tiene los archivos que el patcher copia.
+bool hasResources();
+
+/// Arranca la musica de fondo. Si falla, el resto del programa sigue andando y
+/// las opciones de volumen quedan inertes.
+void startMusic();
+void stopMusic();
 
 #endif // SETUP_FUNCS_H

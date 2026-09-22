@@ -14,6 +14,12 @@
 !/TCLib.exe
 !/TCLib
 
+# Tests: solo las fuentes y los archivos de ejemplo
+!/tests/
+/tests/*
+!/tests/run-tests.cpp
+!/tests/data/
+
 # Exclude files inside directory
 /sym/*
 /sub/*
@@ -31,3 +37,8 @@
 !/sym/nm_nobulk.asy
 !/sym/pm_nobulk.asy
 # overrides the ugly spring shaped resistor
+
+# Artefactos del patcher y de los builds
+*.tclib-tmp
+*.tclib-bak
+/build/

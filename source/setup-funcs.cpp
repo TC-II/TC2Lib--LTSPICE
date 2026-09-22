@@ -1,647 +1,487 @@
 #include "setup-funcs.h"
-#include <filesystem>
-#include <unistd.h>
-#include "miniaudio.h"
-#include <algorithm>
-#include <map>
-#include <fstream>
-#include <locale>
-#include <codecvt>
-#include <string>
-#include <cstdio>
 
-// #include "cmrc/cmrc.hpp"
+#include "ascii-art.h"
+#include "patcher.h"
+
+#define MINIAUDIO_IMPLEMENTATION
+#include "miniaudio.h"
+
+#include <array>
+#include <cstdlib>
+#include <filesystem>
+#include <fstream>
+#include <system_error>
+#include <vector>
 
 #if OS_Windows
-
-#include <windows.h>
-#include <fcntl.h>
 #include <conio.h>
-
-BOOL IsElevated()
-{
-    BOOL fRet = FALSE;
-    HANDLE hToken = NULL;
-
-    if (OpenProcessToken(GetCurrentProcess(), TOKEN_QUERY, &hToken))
-    {
-        TOKEN_ELEVATION Elevation;
-        DWORD cbSize = sizeof(TOKEN_ELEVATION);
-
-        if (GetTokenInformation(hToken, TokenElevation, &Elevation, sizeof(Elevation), &cbSize))
-        {
-            fRet = Elevation.TokenIsElevated;
-        }
-    }
-
-    if (hToken)
-    {
-        CloseHandle(hToken);
-    }
-
-    return fRet;
-}
+#include <fcntl.h>
+#include <io.h>
+#include <windows.h>
+#else
+#include <unistd.h>
 #endif
-extern ma_engine engine;
-extern float vol;
+
 namespace fsys = std::filesystem;
 
-// extern cmrc::embedded_filesystem fs;
+// ---------------------------------------------------------------------------
+// Rutas
+//
+// Todo se resuelve una sola vez en initLib(). Los recursos se buscan junto al
+// ejecutable y no en el directorio actual: el patcher se suele abrir desde un
+// acceso directo o con "ejecutar como administrador", y ahi el directorio
+// actual no es el del programa.
+// ---------------------------------------------------------------------------
 
-/// Credits: https://stackoverflow.com/a/13059195
-/// https://stackoverflow.com/questions/13059091/
-struct membuf : std::streambuf
+namespace
 {
-    membuf(char const *base, size_t size)
+
+fsys::path resourcesDirectory;
+fsys::path examplesDirectory;
+fsys::path symbolsDirectory;
+fsys::path subcircuitsDirectory;
+fsys::path ltspiceDirectory;
+fsys::path iniFile;
+fsys::path backgroundFile;
+
+ma_engine engine;
+bool audioReady = false;
+float volume = 0.2f;
+
+fsys::path executableDirectory()
+{
+    std::error_code code;
+#if OS_Windows
+    std::vector<wchar_t> buffer(MAX_PATH);
+    for (;;)
     {
-        char *p(const_cast<char *>(base));
-        this->setg(p, p, p + size);
+        const DWORD length =
+            GetModuleFileNameW(nullptr, buffer.data(), static_cast<DWORD>(buffer.size()));
+        if (length == 0)
+        {
+            return fsys::current_path(code);
+        }
+        if (length < buffer.size())
+        {
+            return fsys::path(std::wstring(buffer.data(), length)).parent_path();
+        }
+        buffer.resize(buffer.size() * 2);
     }
-    virtual ~membuf() = default;
-};
-
-/// Credits: https://stackoverflow.com/a/13059195
-/// https://stackoverflow.com/questions/13059091/
-struct memstream : virtual membuf, std::istream
-{
-
-    memstream(char const *base, char *const end)
-        : membuf(base, reinterpret_cast<uintptr_t>(end) - reinterpret_cast<uintptr_t>(base)), std::istream(static_cast<std::streambuf *>(this)) {}
-
-    memstream(char const *base, size_t size)
-        : membuf(base, size), std::istream(static_cast<std::streambuf *>(this)) {}
-};
-
-static std::string userProfile = "";
-static std::string userRoaming = "";
-static std::string userLTspice = "";
-static std::string examples = "resources/Examples/";
-static std::string iniFile = "";
-static std::string bgFile = "";
-static std::string iniLightFilelocal = "resources/light-theme.ini";
-static std::string iniDarkFilelocal = "resources/dark-theme.ini";
-static std::string bgFilelocal = "resources/LTspice.jpg";
-static std::string refBjtCmp = "resources/bjt.ini";
-static std::string refDioCmp = "resources/dio.ini";
-static std::string refJftCmp = "resources/jft.ini";
-static std::string refMosCmp = "resources/mos.ini";
-
-// Extra functions
-
-void overwriteCopy(std::string source, std::string destination)
-{
-    if (std::filesystem::exists(destination))
+#else
+    const fsys::path self = fsys::read_symlink("/proc/self/exe", code);
+    if (!code)
     {
-        // Delete the existing file
-        try
-        {
-            std::filesystem::remove(destination);
-        }
-        catch (const std::filesystem::filesystem_error &e)
-        {
-            std::cerr << "  Error removing existing file while copying: " << e.what() << std::endl;
-            return;
-        }
+        return self.parent_path();
     }
-
-    // Copy background file to userProfile folder
-
-    fsys::copy_file(source, destination, fsys::copy_options::overwrite_existing);
-
-    // auto resourceFile = fs.open(source);
-    // auto memostream = memstream(const_cast<char *>(resourceFile.begin()),
-    //                             const_cast<char *>(resourceFile.end()));
-    // auto outstream = std::ofstream(destination, std::ios::binary);
-    // outstream << memostream.rdbuf();
-    // outstream.close();
+    return fsys::current_path(code);
+#endif
 }
-
-void replaceColorsSection(const std::string &configFile, const std::string &newContentFile)
-{
-    std::ifstream configFileStream(configFile);
-    std::ofstream tempFileStream("temp.ini");
-
-    // auto resourceFile = fs.open(newContentFile);
-    std::string line;
-    bool inColorsSection = false;
-
-    while (std::getline(configFileStream, line))
-    {
-        if (line.find("[Colors]") != std::string::npos)
-        {
-            inColorsSection = true;
-            tempFileStream << line << std::endl;
-
-            std::ifstream newContentFileStream(newContentFile);
-            // auto newContentFileStream = memstream(const_cast<char *>(resourceFile.begin()),
-            //                                       const_cast<char *>(resourceFile.end()));
-            std::string newContent;
-
-            newContentFileStream.seekg(0, std::ios::end);
-            newContent.reserve(newContentFileStream.tellg());
-            newContentFileStream.seekg(0, std::ios::beg);
-            newContent.assign((std::istreambuf_iterator<char>(newContentFileStream)),
-                              std::istreambuf_iterator<char>());
-
-            tempFileStream << newContent << std::endl;
-        }
-        else if (inColorsSection && line[0] == '[')
-        {
-            inColorsSection = false;
-        }
-
-        if (!inColorsSection)
-        {
-            tempFileStream << line << std::endl;
-        }
-    }
-
-    configFileStream.close();
-    tempFileStream.close();
-
-    std::remove(configFile.c_str());
-    fsys::copy_file("temp.ini", configFile);
-    std::remove("temp.ini");
-}
-
-void changeIniParameter(const std::string &configFile, std::string parameter, int value)
-{
-    std::ifstream configFileStream(configFile);
-    std::ofstream tempFileStream("temp.ini");
-
-    std::string line;
-
-    while (std::getline(configFileStream, line))
-    {
-        if (line.find(parameter) != std::string::npos)
-        {
-            // replace the line in the configFileStream with the new one
-            std::string newLine = parameter + "=" + std::to_string(value);
-            tempFileStream << newLine << std::endl;
-            continue;
-        }
-        else
-        {
-            tempFileStream << line << std::endl;
-        }
-    }
-
-    configFileStream.close();
-    tempFileStream.close();
-
-    std::remove(configFile.c_str());
-    fsys::copy_file("temp.ini", configFile.c_str());
-    std::remove("temp.ini");
-}
-
-void changeAddIniParameter(const std::string &configFile, std::string parameter, std::string family, std::string value)
-{
-    std::ifstream configFileStream(configFile);
-    std::ofstream tempFileStream("temp.ini");
-
-    std::string line;
-    bool found = false;
-    while (std::getline(configFileStream, line))
-    {
-        if (line.find(parameter) != std::string::npos)
-        {
-            found = true;
-            break;
-        }
-    }
-    configFileStream.clear();
-    configFileStream.seekg(0, std::ios::beg);
-    while (std::getline(configFileStream, line))
-    {
-        if(found) {
-            if (line.find(parameter) != std::string::npos)
-            {
-                // replace the line in the configFileStream with the new one
-                std::string newLine = parameter + "=" + value;
-                tempFileStream << newLine << std::endl;
-            }
-            else
-            {
-                tempFileStream << line << std::endl;
-            }
-        }
-        else {
-            while (std::getline(configFileStream, line))
-            {
-                tempFileStream << line << std::endl;
-                if (line.find(family) != std::string::npos)
-                    break;
-            }
-            std::string newLine = parameter + "=" + value;
-            tempFileStream << newLine << std::endl;
-            
-            while (std::getline(configFileStream, line))
-            {
-                tempFileStream << line << std::endl;
-            }
-        }
-   
-    }
-
-    configFileStream.close();
-    tempFileStream.close();
-
-    std::remove(configFile.c_str());
-    fsys::copy_file("temp.ini", configFile.c_str());
-    std::remove("temp.ini");
-}
-
-void addCmpUTF8(const std::string &referenceFile, const std::string &configFile)
-{
-    std::ifstream configFileStream(configFile);
-    std::ifstream referenceFileStream(referenceFile);
-    std::ofstream tempFileStream("temp.ini");
-
-    std::string line;
-    std::map<std::string, int> cmpMap;
-    bool cmp_already_exists = false;
-    bool found_flag = false;
-    bool pasted_flag = false;
-    while (std::getline(configFileStream, line))
-    {
-        if (line.find("[Custon Components]") != std::string::npos)
-        {
-            found_flag = !found_flag;
-        }
-        else if (found_flag && !pasted_flag)
-        {
-            while (std::getline(referenceFileStream, line))
-            {
-                std::string line_lower;
-                // Allocate the destination space
-                line_lower.resize(line.size());
-
-                // Convert the source string to lower case
-                // storing the result in destination string
-                std::transform(line.begin(),
-                               line.end(),
-                               line_lower.begin(),
-                               tolower);
-
-                if (line_lower.find(".model") != std::string::npos)
-                {
-                    auto last = line.find_first_of(" ", line_lower.find(".model") + 7);
-                    auto first = line_lower.find(".model") + 7;
-                    std::string modelName = line.substr(first, last - first);
-                    printf(modelName.c_str());
-                    cmpMap[modelName]++;
-                }
-
-                tempFileStream << line << std::endl;
-            }
-            pasted_flag = true;
-        }
-        else if (found_flag && pasted_flag)
-        {
-            continue;
-        }
-        else if (pasted_flag)
-        {
-            std::string line_lower;
-            // Allocate the destination space
-            line_lower.resize(line.size());
-
-            // Convert the source string to lower case
-            // storing the result in destination string
-            std::transform(line.begin(),
-                           line.end(),
-                           line_lower.begin(),
-                           tolower);
-            if (line_lower.find(".model") != std::string::npos)
-            {
-                cmp_already_exists = false;
-                auto last = line.find_first_of(" ", line_lower.find(".model") + 7);
-                auto first = line_lower.find(".model") + 7;
-                std::string modelName = line.substr(first, last - first);
-                if (cmpMap.find(modelName) != cmpMap.end())
-                {
-                    cmp_already_exists = true;
-                }
-            }
-
-            if (!cmp_already_exists)
-            {
-                tempFileStream << line << std::endl;
-            }
-        }
-    }
-
-    if (!pasted_flag)
-    {
-        configFileStream.clear();
-        configFileStream.seekg(0, std::ios::beg);
-        while (std::getline(referenceFileStream, line))
-        {
-            if (line.find(".model") != std::string::npos)
-            {
-                auto last = line.find_first_of(" ", line.find(".model") + 7);
-                auto first = line.find(".model") + 7;
-                std::string modelName = line.substr(first, last - first);
-                printf(modelName.c_str());
-                cmpMap[modelName]++;
-            }
-            tempFileStream << line << std::endl;
-        }
-        while (std::getline(configFileStream, line))
-        {
-            std::string line_lower;
-            // Allocate the destination space
-            line_lower.resize(line.size());
-
-            // Convert the source string to lower case
-            // storing the result in destination string
-            std::transform(line.begin(),
-                           line.end(),
-                           line_lower.begin(),
-                           tolower);
-            if (line_lower.find(".model") != std::string::npos)
-            {
-                cmp_already_exists = false;
-                auto last = line.find_first_of(" ", line_lower.find(".model") + 7);
-                auto first = line_lower.find(".model") + 7;
-                std::string modelName = line.substr(first, last - first);
-                if (cmpMap.find(modelName) != cmpMap.end())
-                {
-                    cmp_already_exists = true;
-                }
-            }
-
-            if (!cmp_already_exists)
-            {
-                tempFileStream << line << std::endl;
-            }
-        }
-    }
-
-    configFileStream.close();
-    referenceFileStream.close();
-    tempFileStream.close();
-
-    std::remove(configFile.c_str());
-    fsys::copy_file("temp.ini", configFile.c_str());
-    std::remove("temp.ini");
-}
-
-void addCmpUTF16(const std::string &referenceFile, const std::string &configFile)
-{
-    std::wifstream configFileStream(configFile, std::ios::binary);
-    configFileStream.imbue(std::locale(configFileStream.getloc(), new std::codecvt_utf16<wchar_t, 0x10ffff, std::little_endian>));
-
-    std::ifstream referenceFileStream(referenceFile);
-
-    std::wofstream tempFileStream("temp.ini", std::ios::binary);
-    tempFileStream.imbue(std::locale(tempFileStream.getloc(), new std::codecvt_utf16<wchar_t, 0x10ffff, std::little_endian>));
-
-    std::wstring line;
-    std::string line8;
-    std::map<std::wstring, int> cmpMap;
-    bool cmp_already_exists = false;
-    bool found_flag = false;
-    bool pasted_flag = false;
-    
-    while (std::getline(configFileStream, line))
-    {        
-        if (line.find(L"[Custon Components]") != std::string::npos)
-        {
-            found_flag = !found_flag;
-        }
-        else if (found_flag && !pasted_flag)
-        {
-            while (std::getline(referenceFileStream, line8))
-            {
-                std::wstring_convert<std::codecvt_utf8_utf16<wchar_t>> converter;
-                std::wstring line8_to_16 = converter.from_bytes(line8);
-
-                std::wstring line_lower;
-                // Allocate the destination space
-                line_lower.resize(line8_to_16.size());
-
-                // Convert the source string to lower case
-                // storing the result in destination string
-                std::transform(line8_to_16.begin(),
-                                line8_to_16.end(),
-                               line_lower.begin(),
-                               tolower);
-
-                if (line_lower.find(L".model") != std::string::npos)
-                {
-                    auto last = line8_to_16.find_first_of(L" ", line_lower.find(L".model") + 7);
-                    auto first = line_lower.find(L".model") + 7;
-                    std::wstring modelName = line8_to_16.substr(first, last - first);
-                    //printf(modelName.c_str());
-                    cmpMap[modelName]++;
-                }
-
-                tempFileStream << line8_to_16 << std::endl;
-            }
-            pasted_flag = true;
-        }
-        else if (found_flag && pasted_flag)
-        {
-            continue;
-        }
-        else if (pasted_flag)
-        {
-            std::wstring line_lower;
-            // Allocate the destination space
-            line_lower.resize(line.size());
-
-            // Convert the source string to lower case
-            // storing the result in destination string
-            std::transform(line.begin(),
-                           line.end(),
-                           line_lower.begin(),
-                           tolower);
-            if (line_lower.find(L".model") != std::string::npos)
-            {
-                cmp_already_exists = false;
-                auto last = line.find_first_of(L" ", line_lower.find(L".model") + 7);
-                auto first = line_lower.find(L".model") + 7;
-                std::wstring modelName = line.substr(first, last - first);
-                if (cmpMap.find(modelName) != cmpMap.end())
-                {
-                    cmp_already_exists = true;
-                }
-            }
-
-            if (!cmp_already_exists)
-            {
-                tempFileStream << line << std::endl;
-            }
-        }
-    }
-
-    if (!pasted_flag)
-    {
-        configFileStream.clear();
-        configFileStream.seekg(0, std::ios::beg);
-        while (std::getline(referenceFileStream, line8))
-        {
-            std::wstring_convert<std::codecvt_utf8_utf16<wchar_t>> converter;
-            std::wstring line8_to_16 = converter.from_bytes(line8);
-            if (line8_to_16.find(L".model") != std::string::npos)
-            {
-                auto last = line8_to_16.find_first_of(L" ", line8_to_16.find(L".model") + 7);
-                auto first = line8_to_16.find(L".model") + 7;
-                std::wstring modelName = line8_to_16.substr(first, last - first);
-                // printf(modelName.c_str());
-                cmpMap[modelName]++;
-            }
-            tempFileStream << line8_to_16 << std::endl;
-        }
-        while (std::getline(configFileStream, line))
-        {
-            std::wstring line_lower;
-            // Allocate the destination space
-            line_lower.resize(line.size());
-
-            // Convert the source string to lower case
-            // storing the result in destination string
-            std::transform(line.begin(),
-                           line.end(),
-                           line_lower.begin(),
-                           tolower);
-            if (line_lower.find(L".model") != std::wstring::npos)
-            {
-                cmp_already_exists = false;
-                auto last = line.find_first_of(L" ", line_lower.find(L".model") + 7);
-                auto first = line_lower.find(L".model") + 7;
-                std::wstring modelName = line.substr(first, last - first);
-                if (cmpMap.find(modelName) != cmpMap.end())
-                {
-                    cmp_already_exists = true;
-                }
-            }
-
-            if (!cmp_already_exists)
-            {
-                tempFileStream << line << std::endl;
-            }
-        }
-    }
-
-    configFileStream.close();
-    referenceFileStream.close();
-    tempFileStream.close();
-
-    std::remove(configFile.c_str());
-    fsys::copy_file("temp.ini", configFile.c_str());
-    std::remove("temp.ini");
-}
-
-void copyFolder(const fsys::path &source, const fsys::path &destination)
-{
-    if (!fsys::exists(destination))
-    {
-        fsys::create_directory(destination);
-    }
-
-    for (const auto &entry : fsys::directory_iterator(source))
-    {
-        const auto &sourcePath = entry.path();
-        const auto &destinationPath = destination / sourcePath.filename();
-
-        if (fsys::is_directory(sourcePath))
-        {
-            copyFolder(sourcePath, destinationPath);
-        }
-        else
-        {
-            if (fsys::exists(destinationPath))
-            {
-                fsys::remove(destinationPath);
-            }
-            fsys::copy_file(sourcePath, destinationPath);
-        }
-    }
-}
-
-// Menu Functions
-
-void print_menu(int opt_i, std::string last_op)
-{
-    std::string menuItems[] = {
-        "Apply default patches",
-        "Apply Dark Theme",
-        "Apply White Theme",
-        "Load custom components and examples",
-        "Load custom background",
-        "Adjust line width",
-        "Apply custom shortcuts",
-        "Credits",
-        "Volume +",
-        "Volume -",
-        "Exit"};
-    int menu_length = 11;
 
 #if OS_Windows
-    _setmode(_fileno(stdout), _O_WTEXT);
-    std::wcout << L"\033[36m\n\n"
-                  L"  ████████╗ ██████╗              ██╗     ██╗██████╗ \n"
-                  L"  ╚══██╔══╝██╔════╝              ██║     ██║██╔══██╗\n"
-                  L"     ██║   ██║         █████╗    ██║     ██║██████╔╝\n"
-                  L"     ██║   ██║         ╚════╝    ██║     ██║██╔══██╗\n"
-                  L"     ██║   ╚██████╗              ███████╗██║██████╔╝\n"
-                  L"     ╚═╝    ╚═════╝              ╚══════╝╚═╝╚═════╝ \n";
-    // Credits
-    std::wcout << L"          Agustín Gullino, Javier Petrucci\n\n \033[0m";
-    _setmode(_fileno(stdout), _O_TEXT);
+/// Variable de entorno como ruta nativa. Se usa la version ancha para no perder
+/// caracteres si el nombre de usuario no es ASCII.
+fsys::path environmentPath(const wchar_t *name)
+{
+    const wchar_t *value = _wgetenv(name);
+    if (value == nullptr || value[0] == L'\0')
+    {
+        return fsys::path();
+    }
+    return fsys::path(value);
+}
+#endif
+
+/// Mientras vive, la consola de Windows queda en modo UTF-16, que es lo unico
+/// que dibuja bien el arte ASCII. Hay que volver a modo texto antes de escribir
+/// con std::cout, asi que conviene que el cambio se deshaga solo.
+class WideConsole
+{
+public:
+    WideConsole()
+    {
+#if OS_Windows
+        _setmode(_fileno(stdout), _O_WTEXT);
+#endif
+    }
+
+    ~WideConsole()
+    {
+#if OS_Windows
+        _setmode(_fileno(stdout), _O_TEXT);
+#endif
+    }
+
+    WideConsole(const WideConsole &) = delete;
+    WideConsole &operator=(const WideConsole &) = delete;
+};
+
+void waitForEnter()
+{
+    std::string ignored;
+    std::getline(std::cin, ignored);
+}
+
+/// true si se puede crear un archivo en `directory`. Lo comprueba creando uno,
+/// que es la unica forma confiable en Windows: los permisos efectivos dependen
+/// de la ACL, de la herencia y de la virtualizacion de carpetas.
+bool isWritable(const fsys::path &directory)
+{
+    const fsys::path probe = directory / "tclib-write-test.tmp";
+    std::ofstream probeStream(probe);
+    const bool writable = probeStream.is_open();
+    probeStream.close();
+
+    std::error_code ignored;
+    fsys::remove(probe, ignored);
+    return writable;
+}
+
+// ---------------------------------------------------------------------------
+// Operaciones sobre archivos
+// ---------------------------------------------------------------------------
+
+/// Aplica `edit` sobre LTspice.ini y lo reescribe solo si hubo cambios.
+using IniEdit = bool (*)(std::vector<std::string> &);
+
+std::string editIniFile(IniEdit edit, const char *successMessage)
+{
+    patcher::TextFile file;
+    std::string error;
+    if (!patcher::readTextFile(iniFile.string(), file, error))
+    {
+        return "Error: LTspice.ini not found. Run LTspice once first.";
+    }
+    if (!edit(file.lines))
+    {
+        return std::string(successMessage) + " (already applied)";
+    }
+    if (!patcher::writeTextFileSafely(iniFile.string(), file, error))
+    {
+        return "Error: " + error;
+    }
+    return successMessage;
+}
+
+/// Reemplaza la seccion [Colors] del LTspice.ini por el contenido del tema.
+std::string applyTheme(const char *themeFileName, const char *successMessage)
+{
+    patcher::TextFile theme;
+    std::string error;
+    if (!patcher::readTextFile((resourcesDirectory / themeFileName).string(), theme, error))
+    {
+        return "Error: " + error;
+    }
+
+    patcher::TextFile file;
+    if (!patcher::readTextFile(iniFile.string(), file, error))
+    {
+        return "Error: LTspice.ini not found. Run LTspice once first.";
+    }
+    if (!patcher::replaceIniSection(file.lines, "Colors", theme.lines))
+    {
+        return std::string(successMessage) + " (already applied)";
+    }
+    if (!patcher::writeTextFileSafely(iniFile.string(), file, error))
+    {
+        return "Error: " + error;
+    }
+    return successMessage;
+}
+
+/// Inserta los modelos de `referenceFileName` en un standard.* de LTspice.
+bool addComponents(const char *referenceFileName, const char *configFileName, std::string &error)
+{
+    patcher::TextFile reference;
+    if (!patcher::readTextFile((resourcesDirectory / referenceFileName).string(), reference, error))
+    {
+        return false;
+    }
+
+    const fsys::path configFile = ltspiceDirectory / "lib" / "cmp" / configFileName;
+    patcher::TextFile config;
+    if (!patcher::readTextFile(configFile.string(), config, error))
+    {
+        return false;
+    }
+
+    patcher::mergeCustomComponents(reference.lines, config.lines);
+    return patcher::writeTextFileSafely(configFile.string(), config, error);
+}
+
+bool copyFolder(const fsys::path &source, const fsys::path &destination, std::string &error)
+{
+    std::error_code code;
+    fsys::create_directories(destination, code);
+    if (code)
+    {
+        error = "no se pudo crear " + destination.string() + ": " + code.message();
+        return false;
+    }
+
+    for (const auto &entry : fsys::directory_iterator(source, code))
+    {
+        const fsys::path &sourcePath = entry.path();
+        const fsys::path destinationPath = destination / sourcePath.filename();
+
+        if (fsys::is_directory(sourcePath, code))
+        {
+            if (!copyFolder(sourcePath, destinationPath, error))
+            {
+                return false;
+            }
+            continue;
+        }
+
+        if (!patcher::copyFileOverwriting(sourcePath.string(), destinationPath.string(), error))
+        {
+            return false;
+        }
+    }
+    if (code)
+    {
+        error = "no se pudo leer " + source.string() + ": " + code.message();
+        return false;
+    }
+    return true;
+}
+
+// ---------------------------------------------------------------------------
+// Acciones del menu
+// ---------------------------------------------------------------------------
+
+bool editPenWidth(std::vector<std::string> &lines)
+{
+    return patcher::setIniKey(lines, "Options", "PenWidth", "2");
+}
+
+bool editBackground(std::vector<std::string> &lines)
+{
+    return patcher::setIniKey(lines, "Options", "MDIbackgroundImage", "3");
+}
+
+bool editShortcuts(std::vector<std::string> &lines)
+{
+    const bool lineChanged = patcher::setIniKey(lines, "SchKeyBoardShortCut", "Draw_Lines", "J");
+    const bool rectChanged =
+        patcher::setIniKey(lines, "SchKeyBoardShortCut", "Draw_Rectangles", "K");
+    return lineChanged || rectChanged;
+}
+
+std::string setDarkTheme()
+{
+    return applyTheme("dark-theme.ini", "Dark theme applied");
+}
+
+std::string setLightTheme()
+{
+    return applyTheme("light-theme.ini", "White theme applied");
+}
+
+std::string setPenWidth()
+{
+    return editIniFile(editPenWidth, "Pen width fix applied");
+}
+
+std::string setShortcuts()
+{
+    return editIniFile(editShortcuts, "Custom shortcuts applied");
+}
+
+std::string loadCustomComponents()
+{
+    std::string error;
+    if (!copyFolder(subcircuitsDirectory, ltspiceDirectory / "lib" / "sub", error) ||
+        !copyFolder(symbolsDirectory, ltspiceDirectory / "lib" / "sym", error) ||
+        !copyFolder(examplesDirectory, ltspiceDirectory / "examples", error))
+    {
+        return "Error: " + error;
+    }
+
+    static const std::array<std::pair<const char *, const char *>, 4> componentFiles = {{
+        {"bjt.ini", "standard.bjt"},
+        {"dio.ini", "standard.dio"},
+        {"jft.ini", "standard.jft"},
+        {"mos.ini", "standard.mos"},
+    }};
+
+    for (const auto &files : componentFiles)
+    {
+        if (!addComponents(files.first, files.second, error))
+        {
+            return "Error: " + error;
+        }
+    }
+    return "Custom components and examples loaded";
+}
+
+std::string loadCustomBackground()
+{
+    std::string error;
+    if (!patcher::copyFileOverwriting((resourcesDirectory / "LTspice.jpg").string(),
+                                      backgroundFile.string(), error))
+    {
+        return "Error: " + error;
+    }
+    return editIniFile(editBackground, "Custom background applied");
+}
+
+std::string doTheThing()
+{
+    const std::string results[] = {setDarkTheme(), loadCustomComponents(), loadCustomBackground(),
+                                   setPenWidth()};
+    for (const std::string &result : results)
+    {
+        if (result.compare(0, 6, "Error:") == 0)
+        {
+            return result;
+        }
+    }
+    return "All patches applied";
+}
+
+std::string printCredits()
+{
+    clearScreen();
+#if OS_Windows
+    {
+        WideConsole wide;
+        std::wcout << L"\033[34m" << art::kCreditsWide;
+        std::wcout << L"\033[33m Credits:\n\n";
+        std::wcout << L"\033[31m TC-Lib: Agustín Gullino, Javier Petrucci\n\n";
+        std::wcout << L"\033[32m Patcher: Agustín Fisher, Agustín Gullino, Javier Petrucci\033[0m";
+    }
+    waitForEnter();
 #else
-    std::cout << "\n\n"
-                 "  ████████╗ ██████╗              ██╗     ██╗██████╗ \n"
-                 "  ╚══██╔══╝██╔════╝              ██║     ██║██╔══██╗\n"
-                 "     ██║   ██║         █████╗    ██║     ██║██████╔╝\n"
-                 "     ██║   ██║         ╚════╝    ██║     ██║██╔══██╗\n"
-                 "     ██║   ╚██████╗              ███████╗██║██████╔╝\n"
-                 "     ╚═╝    ╚═════╝              ╚══════╝╚═╝╚═════╝ \n";
-    // Credits
+    std::cout << art::kLogoNarrow;
+    std::cout << "\n  TC-Lib: Agustín Gullino, Javier Petrucci\n";
+    std::cout << "  Patcher: Agustín Fisher, Agustín Gullino, Javier Petrucci\n";
+    char ignored;
+    if (read(STDIN_FILENO, &ignored, 1) != 1)
+    {
+        return "";
+    }
+#endif
+    return "";
+}
+
+std::string volumeUp()
+{
+    if (!audioReady)
+    {
+        return "No audio device available";
+    }
+    volume *= 1.4f;
+    volume = volume > 1.0f ? 1.0f : volume;
+    ma_engine_set_volume(&engine, volume);
+    return "";
+}
+
+std::string volumeDown()
+{
+    if (!audioReady)
+    {
+        return "No audio device available";
+    }
+    volume *= 0.6f;
+    ma_engine_set_volume(&engine, volume);
+    return "";
+}
+
+std::string exitProgram()
+{
+    return "Exiting program. Goodbye!";
+}
+
+/// Tabla del menu: agregar una opcion es agregar una fila. El recorrido y el
+/// despacho salen de aca, asi que no hay una longitud que mantener aparte.
+struct MenuEntry
+{
+    const char *label;
+    std::string (*action)();
+};
+
+const std::array<MenuEntry, 11> menu = {{
+    {"Apply default patches", doTheThing},
+    {"Apply Dark Theme", setDarkTheme},
+    {"Apply White Theme", setLightTheme},
+    {"Load custom components and examples", loadCustomComponents},
+    {"Load custom background", loadCustomBackground},
+    {"Adjust line width", setPenWidth},
+    {"Apply custom shortcuts", setShortcuts},
+    {"Credits", printCredits},
+    {"Volume +", volumeUp},
+    {"Volume -", volumeDown},
+    {"Exit", exitProgram},
+}};
+
+} // namespace
+
+// ---------------------------------------------------------------------------
+// Interfaz publica
+// ---------------------------------------------------------------------------
+
+std::size_t menuLength()
+{
+    return menu.size();
+}
+
+bool runMenuOption(std::size_t selected, std::string &lastOperation)
+{
+    if (selected >= menu.size())
+    {
+        lastOperation = "Select a valid option";
+        return true;
+    }
+
+    std::string result;
+    try
+    {
+        result = menu[selected].action();
+    }
+    catch (const std::exception &e)
+    {
+        result = std::string("Error: ") + e.what();
+    }
+
+    if (!result.empty())
+    {
+        lastOperation = result;
+    }
+    return menu[selected].action != exitProgram;
+}
+
+void printMenu(std::size_t selected, const std::string &lastOperation)
+{
+#if OS_Windows
+    {
+        WideConsole wide;
+        std::wcout << L"\033[36m\n\n" << art::kLogoWide;
+        std::wcout << L"          Agustín Gullino, Javier Petrucci\n\n \033[0m";
+    }
+#else
+    std::cout << art::kLogoNarrow;
     std::cout << "          Agustín Gullino, Javier Petrucci\n\n \033[0m";
 #endif
 
-    // Display menu
     std::cout << "\n\n";
     std::cout << "    Use arrows to navigate.";
     std::cout << "\n\n";
-    for (int i = 0; i < menu_length; i++)
+    for (std::size_t i = 0; i < menu.size(); ++i)
     {
-
-        if (i == opt_i)
+        if (i == selected)
         {
-            std::cout << "\033[31m -> "; // Set color and print arrow next to the selected option
+            std::cout << "\033[31m -> " << menu[i].label << "\n\033[0m";
         }
         else
         {
-            std::cout << "    ";
-        }
-
-        std::cout << menuItems[i];
-        std::cout << "\n";
-
-        if (i == opt_i)
-        {
-            std::cout << "\033[0m"; // Reset color to default
+            std::cout << "    " << menu[i].label << "\n";
         }
     }
 
-    std::cout << "\n\n    \033[32m->" + last_op + "<-\033[0m \n\n";
+    std::cout << "\n\n    \033[32m->" << lastOperation << "<-\033[0m \n\n";
 }
 
-void color(std::string text_color)
-{
-#if OS_Windows
-    text_color = "Color 0" + text_color;
-    std::system(text_color.c_str());
-#else
-    return;
-#endif
-}
-
-void clear_screen()
+void clearScreen()
 {
 #if OS_Windows
     std::system("cls");
@@ -650,306 +490,132 @@ void clear_screen()
     std::system("clear");
 #endif
 }
-#if OS_Windows
-// Convert an ANSI string to a wide Unicode String
-std::wstring ansi2unicode(const std::string &str)
+
+bool hasResources()
 {
-    int size_needed = MultiByteToWideChar(CP_ACP, 0, &str[0], (int)str.size(), NULL, 0);
-    std::wstring wstrTo(size_needed, 0);
-    MultiByteToWideChar(CP_ACP, 0, &str[0], (int)str.size(), &wstrTo[0], size_needed);
-    return wstrTo;
+    static const char *const required[] = {"resources/dark-theme.ini", "resources/light-theme.ini",
+                                           "resources/LTspice.jpg",    "resources/bjt.ini",
+                                           "resources/dio.ini",        "resources/jft.ini",
+                                           "resources/mos.ini",        "resources/Examples",
+                                           "sym",                      "sub"};
+
+    const fsys::path base = executableDirectory();
+    for (const char *entry : required)
+    {
+        if (!fsys::exists(base / entry))
+        {
+            std::cout << "  Falta " << (base / entry).string() << std::endl;
+            return false;
+        }
+    }
+    return true;
 }
 
-// Convert a wide Unicode string to an UTF8 string
-std::string utf8_encode(const std::wstring &wstr)
+void startMusic()
 {
-    int size_needed = WideCharToMultiByte(CP_UTF8, 0, &wstr[0], (int)wstr.size(), NULL, 0, NULL, NULL);
-    std::string strTo(size_needed, 0);
-    WideCharToMultiByte(CP_UTF8, 0, &wstr[0], (int)wstr.size(), &strTo[0], size_needed, NULL, NULL);
-    return strTo;
+    if (ma_engine_init(nullptr, &engine) != MA_SUCCESS)
+    {
+        return;
+    }
+    audioReady = true;
+    ma_engine_set_volume(&engine, volume);
+    ma_engine_play_sound(&engine, (resourcesDirectory / "winrar_music.mp3").string().c_str(),
+                         nullptr);
 }
-#endif
+
+void stopMusic()
+{
+    if (audioReady)
+    {
+        ma_engine_uninit(&engine);
+        audioReady = false;
+    }
+}
+
 bool initLib()
 {
+    const fsys::path base = executableDirectory();
+    resourcesDirectory = base / "resources";
+    examplesDirectory = resourcesDirectory / "Examples";
+    symbolsDirectory = base / "sym";
+    subcircuitsDirectory = base / "sub";
+
 #if OS_Windows
-    if (!IsElevated())
+    fsys::path localAppData = environmentPath(L"LOCALAPPDATA");
+    fsys::path roamingAppData = environmentPath(L"APPDATA");
+    const fsys::path userProfile = environmentPath(L"USERPROFILE");
+
+    if (userProfile.empty() && (localAppData.empty() || roamingAppData.empty()))
     {
-
-        _setmode(_fileno(stdout), _O_WTEXT);
-        std::wcout << L"\n\n"
-                      L"                            ████████                          \n"
-                      L"                          ██        ██                        \n"
-                      L"                        ██            ██                      \n"
-                      L"                        ██            ██                      \n"
-                      L"                      ██    ████████    ██                    \n"
-                      L"                    ██    ████████████    ██                  \n"
-                      L"                    ██    ████████████    ██                  \n"
-                      L"                  ██      ████████████      ██                \n"
-                      L"                ██          ████████          ██              \n"
-                      L"                ██          ████████          ██              \n"
-                      L"              ██            ████████            ██            \n"
-                      L"            ██                ████                ██          \n"
-                      L"            ██                ████                ██          \n"
-                      L"          ██                                        ██        \n"
-                      L"        ██                    ████                    ██      \n"
-                      L"        ██                  ████████                  ██      \n"
-                      L"      ██                  ████████████                  ██    \n"
-                      L"    ██                    ████████████                    ██  \n"
-                      L"    ██                      ████████                      ██  \n"
-                      L"    ██                        ████                        ██  \n"
-                      L"      ██                                                ██    \n"
-                      L"        ████████████████████████████████████████████████      \n";
-
-        _setmode(_fileno(stdout), _O_TEXT);
-
-        std::cout << std::endl
-                  << std::endl
-                  << "  TCLib for Windows ";
-        std::cout << std::endl
-                  << std::endl
-                  << "  ERROR: Please run this program as an administrator. " << std::endl
-                  << std::endl;
-        std::cout << "  Press any key to exit..." << std::endl;
-        _getch(); // Wait for user input
-        return true;
+        std::cout << "  ERROR: no se pudo determinar el perfil del usuario." << std::endl;
+        return false;
+    }
+    if (localAppData.empty())
+    {
+        localAppData = userProfile / "AppData" / "Local";
+    }
+    if (roamingAppData.empty())
+    {
+        roamingAppData = userProfile / "AppData" / "Roaming";
     }
 
-    std::string userProfilewindows = std::getenv("USERPROFILE");
-    std::wstring userProfileunicode = ansi2unicode(userProfilewindows);
-    std::string userProfile = utf8_encode(userProfileunicode);
-    userRoaming = userProfile + "\\AppData\\Roaming\\";
-    userLTspice = userProfile + "\\AppData\\Local\\LTspice\\";
-
-    iniFile = userRoaming + "LTspice.ini";
-    bgFile = userProfile + "\\LTspice.jpg";
-
+    ltspiceDirectory = localAppData / "LTspice";
+    iniFile = roamingAppData / "LTspice.ini";
+    backgroundFile = userProfile.empty() ? (localAppData / "LTspice.jpg")
+                                         : (userProfile / "LTspice.jpg");
 #else
-
-    std::string wineuser = "";
-    // ask user for appdata location in wine folder
+    std::string wineUser;
     std::cout << "  Enter the path to the Wine user directory where LTspice is installed:";
-    std::cin >> wineuser;
+    std::getline(std::cin, wineUser);
     std::cout << std::endl;
 
-    // check for trailing slash
-    if (wineuser.back() != '/')
-    {
-        wineuser += "/";
-    }
-
-    // check if the directory exists
-    if (!fsys::exists(wineuser))
+    if (wineUser.empty() || !fsys::exists(wineUser))
     {
         std::cerr << "  Error: Wine user directory does not exist." << std::endl;
-        return true;
+        return false;
     }
-    userProfile = wineuser;
-    userRoaming = wineuser + "AppData/Roaming/";
-    userLTspice = wineuser + "AppData/Local/LTspice/";
 
-    iniFile = userRoaming + "LTspice.ini";
-    bgFile = wineuser + "/LTspice.jpg";
+    const fsys::path userProfile(wineUser);
+    ltspiceDirectory = userProfile / "AppData" / "Local" / "LTspice";
+    iniFile = userProfile / "AppData" / "Roaming" / "LTspice.ini";
+    backgroundFile = userProfile / "LTspice.jpg";
 #endif
 
-    return false;
-}
-
-void doTheThing()
-{
-    setDarkTheme();
-    loadCustomComponents();
-    loadCustomBackground();
-    setPenWidth();
-}
-
-void setDarkTheme()
-{
-    replaceColorsSection(iniFile, iniDarkFilelocal);
-}
-
-void setLightTheme()
-{
-    replaceColorsSection(iniFile, iniLightFilelocal);
-}
-
-void loadCustomComponents()
-{
-
-    // Copy sub and sym folders to LTspice folder in AppData repleacing files
-    copyFolder("sub", userLTspice + "lib/sub");
-    copyFolder("sym", userLTspice + "lib/sym");
-    copyFolder(examples, userLTspice + "examples");
-
-    addCmpUTF16(refBjtCmp, userLTspice + "lib/cmp/standard.bjt");
-    addCmpUTF8(refDioCmp, userLTspice + "lib/cmp/standard.dio");
-    addCmpUTF16(refJftCmp, userLTspice + "lib/cmp/standard.jft");
-    addCmpUTF16(refMosCmp, userLTspice + "lib/cmp/standard.mos");
-}
-
-void loadCustomBackground()
-{
-    changeIniParameter(iniFile, "MDIbackgroundImage", 3);
-    overwriteCopy(bgFilelocal, bgFile);
-}
-
-void setPenWidth()
-{
-    changeIniParameter(iniFile, "PenWidth", 2);
-}
-
-void setShortcuts() {
-    changeAddIniParameter(iniFile, "Draw_Lines", "[SchKeyBoardShortCut]", "J");
-    changeAddIniParameter(iniFile, "Draw_Rectangles", "[SchKeyBoardShortCut]", "K");
-}
-
-int music()
-{
-    ma_result result;
-
-    result = ma_engine_init(NULL, &engine);
-    if (result != MA_SUCCESS)
+    if (!fsys::exists(ltspiceDirectory))
     {
-        printf("Failed to initialize audio engine.");
-        return -1;
+        std::cout << std::endl
+                  << "  ERROR: no se encontro LTspice en " << ltspiceDirectory.string() << std::endl
+                  << "  Instalalo y abrilo una vez antes de correr el patcher." << std::endl
+                  << std::endl;
+        return false;
     }
-    ma_engine_set_volume(&engine, vol);
-    ma_engine_play_sound(&engine, "resources/winrar_music.mp3", NULL);
 
-    return 0;
-}
-
-void printWeather()
-{
-
-    clear_screen();
+    // El patcher solo escribe en el perfil del usuario, asi que no hace falta
+    // elevar privilegios; lo que si hace falta es poder escribir en los tres
+    // lugares que toca. Se comprueban los tres antes de empezar, para avisar de
+    // entrada en vez de fallar a la mitad del parche.
+    for (const fsys::path &directory :
+         {ltspiceDirectory, iniFile.parent_path(), backgroundFile.parent_path()})
+    {
+        if (isWritable(directory))
+        {
+            continue;
+        }
 
 #if OS_Windows
-    _setmode(_fileno(stdout), _O_WTEXT);
-
-    std::wcout << L"\033[34m";
-
-    std::wcout << L"\n\n"
-                  L"                                 ████                                 \n"
-                  L"                             ▒████▒▓████                              \n"
-                  L"                          ▒████▓      █████░                          \n"
-                  L"                      ░▓████▒            ▓████▓                       \n"
-                  L"                  ░██████░                  ▒██████                   \n"
-                  L"          ▒▓█████████▒                          ▓█████████▓▒          \n"
-                  L"  ████████████▓▒░                                    ░▒▓████████████  \n"
-                  L"   ██▒                                                         ███   \n"
-                  L"   ▓██░   █▓          █████████████    █████████   ████████    ▒██    \n"
-                  L"    ██▓   ████▓            ███      ▓███      ░█  ██▒   ███    ███    \n"
-                  L"    ▓██   ████████        ░██▒     ▓██▒                ▓██    ░██░    \n"
-                  L"    ░██░  ███████████     ███      ███               ▓██▒     ▒██     \n"
-                  L"     ██▒  ████████▒       ███      ███             ▒██░       ▓██     \n"
-                  L"     ██▒  █████          ▒██▒      ███▓    ███▓  ░██▓   ▓▓    ▓██     \n"
-                  L"     ██▓  █▓             ███░       ▓████████░  █████████     ▓██     \n"
-                  L"     ██▓                                                      ███     \n"
-                  L"     ██▓░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░███     \n"
-                  L"     █████████▓▒▒█████▓▓▓▓▓▓███████                           ▓██     \n"
-                  L"     ███████▒      ███      ███████             ▓██░█         ▓██     \n"
-                  L"     ████████████▒ ▒██ ▓███████████          ▓█████ ███       ▓██     \n"
-                  L"    ▒███████████░  ██▒      ███████         ░██▓    ░░░░      ▒██     \n"
-                  L"    ▓████████▓   ██████████  ██████       ███▓ ██▒ ████▓      ░██░    \n"
-                  L"    ▓███████▒  ████████████  ██████        ████▓  ▓████        ██▒    \n"
-                  L"    ████████   ░░░░▒██  ░   ███████         ▒██░ █▓  █         ██▓    \n"
-                  L"    ████████████████████▓██████████             ███░           ███    \n"
-                  L"    ███▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓░░░░░░░░░░░░░░░░░░░░░░░░░░░░███    \n"
-                  L"    ██▓                ▓███▒░█     ███████████████████████████████    \n"
-                  L"    ▓██              ░█░   ░█▒     ███▓   ██████   ░█████████████░    \n"
-                  L"     ███             ██  ░▓██      ███▓▒  █████    ░████████████▓     \n"
-                  L"      ███            ▓████▓        ████▓  ███▓  █░ ░███████████▓      \n"
-                  L"       ▓███            ░████▓      ████▓  ██░ ░██░ ░██████████░       \n"
-                  L"         ███▓       █ ██▓  ██      ████▓  █▒         ████████         \n"
-                  L"          ░███▓    ░█▒    ▒█       ████▓  ███████░ ░███████           \n"
-                  L"            ░███▓  ▒▓░████▒        █████  ███████░ ▒█████             \n"
-                  L"               ████                ████████████████████               \n"
-                  L"                 ████              ██████████████████                 \n"
-                  L"                   ▓███▒           ███████████████▒                   \n"
-                  L"                     ▒███▓         █████████████░                     \n"
-                  L"                        ████       ███████████                        \n"
-                  L"                          ████░    ████████▓                          \n"
-                  L"                            ▓███▒  ██████▒                            \n"
-                  L"                              ▒████████░                              \n"
-                  L"                                ░████                                 \n";
-
-    std::wcout << L"\033[33m ";
-    std::wcout << L"Credits:\n\n";
-    std::wcout << L"\033[31m ";
-    std::wcout << L"TC-Lib: Agustín Gullino, Javier Petrucci\n\n";
-    std::wcout << L"\033[32m ";
-    std::wcout << L"Patcher: Agustín Fisher, Agustín Gullino, Javier Petrucci";
-
-    _setmode(_fileno(stdout), _O_TEXT);
-#else
-    std::cout << "\n\n"
-                 "  ████████╗ ██████╗              ██╗     ██╗██████╗ \n"
-                 "  ╚══██╔══╝██╔════╝              ██║     ██║██╔══██╗\n"
-                 "     ██║   ██║         █████╗    ██║     ██║██████╔╝\n"
-                 "     ██║   ██║         ╚════╝    ██║     ██║██╔══██╗\n"
-                 "     ██║   ╚██████╗              ███████╗██║██████╔╝\n"
-                 "     ╚═╝    ╚═════╝              ╚══════╝╚═╝╚═════╝ \n";
-    // Credits
-    std::cout << "          Agustín Gullino, Javier Petrucci\n\n \033[0m";
-    std::cout << "  TC-Lib: Agustín Gullino, Javier Petrucci\n";
-    std::cout << "  Patcher: Agustín Fisher, Agustín Gullino, Javier Petrucci\n";
+        {
+            WideConsole wide;
+            std::wcout << art::kLockedWide;
+        }
 #endif
-
-    std::string userInput;
-#if OS_Windows
-    std::getline(std::cin, userInput);
-#else
-    char c;
-    read(STDIN_FILENO, &c, 1);
-#endif
-    // std::string command = "curl -m 10 -s \"wttr.in/?1qF&lang=zh\"";
-    // char buffer[128];
-    // std::deque<std::string> forecast;
-
-    // FILE *pipe = popen(command.c_str(), "r");
-    // if (!pipe)
-    // {
-    //     std::cerr << "popen() failed!";
-    //     return;
-    // }
-
-    // while (fgets(buffer, sizeof buffer, pipe) != NULL)
-    // {
-    //     if (forecast.size() == 27)
-    //     {
-    //         forecast.pop_front();
-    //     }
-    //     forecast.push_back(buffer);
-    // }
-
-    // pclose(pipe);
-
-    // for (const auto &line : forecast)
-    // {
-    //     #if OS_Windows
-
-    //         std::wstring_convert<std::codecvt_utf8_utf16<wchar_t>> converter;
-    //         std::wstring wide = converter.from_bytes(line);
-
-    //         _setmode(_fileno(stdout), _O_WTEXT);
-    //         std::cout << line;
-    //         _setmode(_fileno(stdout), _O_TEXT);
-    //     #else
-    //         std::cout << line;
-    //     #endif
-    // }
-}
-
-int hasResources()
-{
-    std::filesystem::path folderPath = "resources";
-
-    if (std::filesystem::exists(folderPath) && std::filesystem::is_directory(folderPath))
-    {
-        return 1;
+        std::cout << std::endl
+                  << "  ERROR: no hay permiso de escritura en " << directory.string() << std::endl
+                  << "  Cerra LTspice y volve a intentar; si sigue, corre el patcher como"
+                  << " administrador." << std::endl
+                  << std::endl
+                  << "  Press enter to exit..." << std::endl;
+        waitForEnter();
+        return false;
     }
-    else
-    {
-        return 0;
-    }
+    return true;
 }
