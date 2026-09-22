@@ -18,7 +18,7 @@ LINE Normal 5 24 5 88
 LINE Normal 8 16 5 20
 LINE Normal 2 16 5 20
 LINE Normal 5 10 5 20
-TEXT 38 81 Left 0 cur
+TEXT 38 81 Left 0 k
 WINDOW 3 38 21 Left 1
 WINDOW 123 38 38 Left 2
 SYMATTR Value R=10K

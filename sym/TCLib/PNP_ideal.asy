@@ -12,7 +12,7 @@ WINDOW 123 64 48 Left 0
 WINDOW 39 64 64 Left 0
 SYMATTR Value hfe=100
 SYMATTR Value2 Veb=.7
-SYMATTR SpiceLine Vec_sat=.3
+SYMATTR SpiceLine Vsat=.3
 SYMATTR Prefix X
 SYMATTR SpiceModel PNP_nice
 SYMATTR ModelFile TCLib/pnp_ideal.lib
