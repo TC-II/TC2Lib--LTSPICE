@@ -27,43 +27,67 @@
 *
 *
 * Behaviour:
-*   - Vbe is clamped to {Vbe} whenever the BE junction is forward biased
+*   - Vbe is clamped to {Vbe} whenever the BE junction is forward biased,
+*     and Vbc to {Vbe} whenever the BC junction is forward biased
 *   - Ic = hfe * Ib   exactly, in the forward active region
-*   - Vce is clamped to {Vsat} in saturation
+*   - Vce stays near {Vsat} in saturation
 *   - reverse active region works with a beta of hfe/rbeta
 *
-* Note on Vsat: Vce = Vbe - Vbc is an identity, so clamping Vce at {Vsat}
-* while Vbe is clamped at {Vbe} forces the BC junction to turn on at
-* {Vbe-Vsat}. That single diode is therefore both the BC junction and the
-* saturation clamp -- having two separate elements fight over the same
-* voltage is what made the previous version of this model hard to solve.
+* THE DEVICE IS PASSIVE. This is the whole point of the Bct formulation
+* below and it is worth stating explicitly, because it is easy to get wrong.
+* A transistor can only restrict the current the external circuit offers it;
+* it can never source current the circuit did not supply, and it can never
+* deliver net power. Writing the collector current as a plain current-
+* controlled current source (F C E Vf {hfe}) looks correct and is not: such
+* a source imposes hfe*Ib regardless of Vce, so with the collector and the
+* emitter shorted together it happily manufactures collector current out of
+* nothing, and for Vce < 0 it pumps energy into the circuit. Bct instead is
+* written as hfe*Ib multiplied by a factor that is 0 at Vce = 0 and 1 for
+* Vce > {Vsat}: that makes it a non-negative conductance, so the collector
+* branch always absorbs power, as a real device must.
 *
-* Note on convergence: every element below is linear except the two diodes,
-* so the Jacobian is constant apart from two entries. There are no behavioural
-* sources, no division by a node voltage or by a branch current, and no
-* limit()/abs(), all of which have zero or undefined derivatives exactly at
-* the cutoff and saturation operating points. epsilon/revepsilon round the
-* diode knees so Newton always has a continuous gradient to follow, and the
-* junction capacitances break the otherwise purely algebraic feedback loop
-* in transient analysis.
+* Convergence notes:
+*   - The only nonlinear elements are the two junction diodes and Bct. There
+*     are no divisions by a node voltage or by a branch current, and no
+*     limit() or abs(), all of which have zero or undefined derivatives
+*     exactly at the cutoff and saturation operating points.
+*   - epsilon/revepsilon round the diode knees so the gradient stays
+*     continuous.
+*   - The junction capacitances break the otherwise purely algebraic
+*     feedback loop in transient analysis.
+*   - A stage driven deep into saturation makes Ic insensitive to Vce, so
+*     the first Newton step overshoots badly and LTspice falls back to gmin
+*     or source stepping. It always converges, but not on the direct
+*     iteration. Raising {vk} softens the knee and helps, at the cost of a
+*     less constant Vce in saturation.
+*
+* Vsat is NOT exactly constant in saturation, and it cannot be. A passive
+* device must carry zero collector current at Vce = 0, so deep in saturation
+* Vce falls as Ic falls. Real transistors behave the same way; this model
+* holds Vce between roughly 0.85*{Vsat} and {Vsat} over a 100:1 range of
+* overdrive, which is flatter than a real device.
 
-.SUBCKT NPN_nice C B E PARAMS: hfe=100 Vbe=0.7 Vsat=0.3 rbeta=20 cje=2p cjc=1p droff=1G dron=10m deps=10m
+.SUBCKT NPN_nice C B E PARAMS: hfe=100 Vbe=0.7 Vsat=0.3 rbeta=20 cje=2p cjc=1p droff=100G dron=10m deps=10m vk={Vsat/15}
 
 
 **Base emitter junction: fixes Vbe, and its current is the base current
 Vf  B  Nf  0
 Dbe Nf E   Dbe_mod
 
-**Base collector junction: fixes Vce at {Vsat} in saturation by taking the
-**collector current the external circuit cannot supply out of the base
+**Base collector junction: an ordinary junction at the same {Vbe}. It only
+**conducts in the reverse active region and when the external circuit forces
+**Vce below zero. It must NOT be used to clamp Vce at {Vsat}: that would put
+**its threshold at {Vbe-Vsat}, below the BE threshold, so it would win the
+**base current whenever Vce is small and collapse Vbe.
 Vr  B  Nr  0
 Dbc Nr C   Dbc_mod
 
-**Forward transport: Ic = hfe * Ib, an exact linear current gain
-Ff  C  E   Vf {hfe}
-
-**Reverse transport, with a beta of hfe/rbeta
-Fr  E  C   Vr {hfe/rbeta}
+**Transport. The first term is the forward channel, the second the reverse
+**one. The 0.5*(1+tanh(...)) factor is the channel modulation: 0 for
+**Vce below {Vsat}, 1 above, switching over a width {vk}. Because it is
+**non-negative and the current only flows when the corresponding voltage is
+**positive, the branch is a passive conductance.
+Bct C  E   I = hfe*I(Vf)*0.5*(1+tanh((V(C,E)-Vsat)/vk)) - (hfe/rbeta)*I(Vr)*0.5*(1+tanh((V(E,C)-Vsat)/vk))
 
 **Junction capacitances, needed so the transport loop is not purely algebraic
 Cbe B  E   {cje}
@@ -71,7 +95,7 @@ Cbc B  C   {cjc}
 
 
 **Models for the diodes
-.model Dbe_mod D(Ron={dron} Roff={droff} Vfwd={Vbe}      epsilon={deps} revepsilon={deps})
-.model Dbc_mod D(Ron={dron} Roff={droff} Vfwd={Vbe-Vsat} epsilon={deps} revepsilon={deps})
+.model Dbe_mod D(Ron={dron} Roff={droff} Vfwd={Vbe} epsilon={deps} revepsilon={deps})
+.model Dbc_mod D(Ron={dron} Roff={droff} Vfwd={Vbe} epsilon={deps} revepsilon={deps})
 
 .ends NPN_nice
