@@ -26,50 +26,52 @@
 *  |/__________________________________> Veb
 *
 *
+* Behaviour:
+*   - Veb is clamped to {Veb} whenever the EB junction is forward biased
+*   - Ic = hfe * Ib   exactly, in the forward active region
+*   - Vec is clamped to {Vsat} in saturation
+*   - reverse active region works with a beta of hfe/rbeta
+*
+* Note on Vsat: Vec = Veb - Vcb is an identity, so clamping Vec at {Vsat}
+* while Veb is clamped at {Veb} forces the CB junction to turn on at
+* {Veb-Vsat}. That single diode is therefore both the CB junction and the
+* saturation clamp -- having two separate elements fight over the same
+* voltage is what made the previous version of this model hard to solve.
+*
+* Note on convergence: every element below is linear except the two diodes,
+* so the Jacobian is constant apart from two entries. There are no behavioural
+* sources, no division by a node voltage or by a branch current, and no
+* limit()/abs(), all of which have zero or undefined derivatives exactly at
+* the cutoff and saturation operating points. epsilon/revepsilon round the
+* diode knees so Newton always has a continuous gradient to follow, and the
+* junction capacitances break the otherwise purely algebraic feedback loop
+* in transient analysis.
 
-.SUBCKT PNP_nice C B E
-
-
-
-**Voltage sources used to measure current trough terminals
-V_Ib Vbint B 0
-V_Ic Vcint C 0
-V_Ie E Veint 0
-
-**Base emiter and base colector voltage drop
-**Emiter base diode
-D5 Veint Vbint Dideal_Veb
-**Colector base diode
-D6 Vcint Vbint Dideal_Vcb
-
-
-**Resistor value according to hfe for forward and inverse current
-
-Rf1 Vcint Vcr R = limit(10u,100Meg, abs(   (     ( V(Vcint,Vcr)*V(Vcint,Vcr)+curve ) / V(Vcint,Vcr)        ) /  ( I(V_Ib)*hfe   ) ) )
-Rr1 Veint Ver R = limit(10u,100Meg, abs(   (     ( V(Veint,Ver)*V(Veint,Ver)+curve ) / V(Veint,Ver)        )  / ( I(V_Ib)*hfe/r) ) )
-
-**Ratio between hfe direct and inverse modes
-.param r 20
-**Transition shape between saturation and active region
-.param curve 100u
+.SUBCKT PNP_nice C B E PARAMS: hfe=100 Veb=0.7 Vsat=0.3 rbeta=20 cje=2p cjc=1p droff=1G dron=10m deps=10m
 
 
-*Rf1 Vcint Vcr R = limit(1u,100Meg, abs(   (     									V(Vcint,Vcr)        ) /  ( I(V_Ib)*hfe   ) ) )
-*Rr1 Veint Ver R = limit(1u,100Meg, abs(   (     									V(Veint,Ver)        )  / ( I(V_Ib)*hfe/20) ) )
+**Emitter base junction: fixes Veb, and its current is the base current
+Vf  Nf B  0
+Deb E  Nf Deb_mod
 
+**Collector base junction: fixes Vec at {Vsat} in saturation by sinking the
+**collector current the external circuit cannot take into the base
+Vr  Nr B  0
+Dcb C  Nr Dcb_mod
 
-**Saturation voltage
-D2 Vcint Ver Dideal_Vec
-D7 Veint Vcr Dideal_Vec
+**Forward transport: Ic = hfe * Ib, an exact linear current gain
+Ff  E  C   Vf {hfe}
+
+**Reverse transport, with a beta of hfe/rbeta
+Fr  C  E   Vr {hfe/rbeta}
+
+**Junction capacitances, needed so the transport loop is not purely algebraic
+Cbe E  B   {cje}
+Cbc C  B   {cjc}
 
 
 **Models for the diodes
-.model Dideal D(Ron=10u Vfwd=10m)
-.model Dideal_Veb D(Ron=10m Vfwd={Veb})
-.model Dideal_Vec D(Ron=10u Vfwd={Vec_sat})
-.model Dideal_Vcb D(Ron=10u Vfwd={Veb*0.98})
+.model Deb_mod D(Ron={dron} Roff={droff} Vfwd={Veb}      epsilon={deps} revepsilon={deps})
+.model Dcb_mod D(Ron={dron} Roff={droff} Vfwd={Veb-Vsat} epsilon={deps} revepsilon={deps})
 
-
-
-.end PNP_nice
-*
+.ends PNP_nice
