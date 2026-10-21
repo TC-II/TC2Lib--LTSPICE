@@ -166,8 +166,8 @@ B1 VCOout 0 V=V(VCC)*V(PSW)
 * 3-input NOR gate
 * tpd 125ns
 * tr 100n
-.SUBCKT CD4000B  A B C Y  VDD VGND  vdd1={vdd} speed1={speed} tripdt1={tripdt}
-.param td1=1e-9*(125-40-10)*5/{vdd1}*{speed1}
+.SUBCKT CD4000B A B C Y VDD VGND vdd=5 vdd1={vdd} speed=1.0 speed1={speed} tripdt=5e-9 tripdt1={tripdt}
+.param td1=1e-9*(125-40-10)*5/vdd1*speed1
 *
 XIN1  A Ai  VDD VGND  CD40_IN_1  vdd2={vdd1}  speed2={speed1}  tripdt2={tripdt1}
 XIN2  B Bi  VDD VGND  CD40_IN_1  vdd2={vdd1}  speed2={speed1}  tripdt2={tripdt1}
@@ -183,8 +183,8 @@ XOUT  Yi Y  VDD VGND  CD40_OUT_1X  vdd2={vdd1} speed2={speed1}  tripdt2={tripdt1
 * 2-input NOR gate
 * tpd 125n
 * tr 100n
-.SUBCKT CD4001B  A B Y  VDD VGND  vdd1={vdd} speed1={speed} tripdt1={tripdt}
-.param td1=1e-9*(125-40-10)*5/{vdd1}*{speed1}
+.SUBCKT CD4001B A B Y VDD VGND vdd=5 vdd1={vdd} speed=1.0 speed1={speed} tripdt=5e-9 tripdt1={tripdt}
+.param td1=1e-9*(125-40-10)*5/vdd1*speed1
 *
 XIN1  A Ai  VDD VGND  CD40_IN_1  vdd2={vdd1}  speed2={speed1}  tripdt2={tripdt1}
 XIN2  B Bi  VDD VGND  CD40_IN_1  vdd2={vdd1}  speed2={speed1}  tripdt2={tripdt1}
@@ -199,8 +199,8 @@ XOUT  Yi Y  VDD VGND  CD40_OUT_1X  vdd2={vdd1} speed2={speed1}  tripdt2={tripdt1
 * 4-input NOR gate
 * tpd 125n
 * tr 100n
-.SUBCKT CD4002B  A B C D Y  VDD VGND  vdd1={vdd} speed1={speed} tripdt1={tripdt}
-.param td1=1e-9*(125-40-10)*5/{vdd1}*{speed1}
+.SUBCKT CD4002B A B C D Y VDD VGND vdd=5 vdd1={vdd} speed=1.0 speed1={speed} tripdt=5e-9 tripdt1={tripdt}
+.param td1=1e-9*(125-40-10)*5/vdd1*speed1
 *
 XIN1  A Ai  VDD VGND  CD40_IN_1  vdd2={vdd1}  speed2={speed1}  tripdt2={tripdt1}
 XIN2  B Bi  VDD VGND  CD40_IN_1  vdd2={vdd1}  speed2={speed1}  tripdt2={tripdt1}
@@ -220,10 +220,10 @@ XOUT  Yi Y  VDD VGND  CD40_OUT_1X  vdd2={vdd1} speed2={speed1}  tripdt2={tripdt1
 * Ci->Co Tpd         130n  td4
 * Ci->Sn Tpd         320n  only modelled with Tpd=td1
 * tr                 100n
-.SUBCKT CD4008B  A0 A1 A2 A3 B0 B1 B2 B3 CI S0 S1 S2 S3 CO  VDD VGND  vdd1={vdd} speed1={speed} tripdt1b={tripdt}
-.param td1=1e-9*(400-40-10)*5.0/{vdd1}*{speed1}
-.param td2=1e-9*(250-40-10)*5.0/{vdd1}*{speed1}
-.param td4=1e-9*(130-40-10)*5.0/{vdd1}*{speed1}
+.SUBCKT CD4008B A0 A1 A2 A3 B0 B1 B2 B3 CI S0 S1 S2 S3 CO VDD VGND vdd=5 vdd1={vdd} speed=1.0 speed1={speed} tripdt=5e-9 tripdt1b={tripdt}
+.param td1=1e-9*(400-40-10)*5.0/vdd1*speed1
+.param td2=1e-9*(250-40-10)*5.0/vdd1*speed1
+.param td4=1e-9*(130-40-10)*5.0/vdd1*speed1
 .param td3=td2-td4
 *
 XIN1  A0 A0i  VCC VGND  CD40_IN_1  vdd2={vdd1}  speed2={speed1}  tripdt2={tripdt1b}
@@ -246,7 +246,7 @@ XOUT5  COi CO  VCC VGND  CD40_OUT_1X  vdd2={vdd1} speed2={speed1}  tripdt2={trip
 .ends
 *
 *
-.SUBCKT  CD4008_i A0 A1 A2 A3 B0 B1 B2 B3 CI S0 S1 S2 S3 CO  tripdt1={tripdt2} td1b={td1a} td2b={td2a} td3b={td3a} td4b={td4a}
+.SUBCKT  CD4008_i A0 A1 A2 A3 B0 B1 B2 B3 CI S0 S1 S2 S3 CO tripdt2=5e-9 tripdt1={tripdt2} td1a=1e-9 td1b={td1a} td2a=1e-9 td2b={td2a} td3a=1e-9 td3b={td3a} td4a=1e-9 td4b={td4a}
 A1CIN   ci 0  0 0 0  ci1n   0    0  BUF  tripdt={tripdt1}
 A1OR0   a0 b0 0 0 0  or10n  or10 0  OR  tripdt={tripdt1}
 A1AND0  a0 b0 0 0 0  and10n 0    0  AND  tripdt={tripdt1}
@@ -294,8 +294,8 @@ A3OR4    and24a and24b and24c and24d or13n  co  0    0  OR  tripdt={tripdt1}
 * 2-input NAND gate
 * tpd 125n
 * tr 100n
-.SUBCKT CD4011B  A B Y  VDD VGND  vdd1={vdd} speed1={speed} tripdt1={tripdt}
-.param td1=1e-9*(125-40-10)*5/{vdd1}*{speed1}
+.SUBCKT CD4011B A B Y VDD VGND vdd=5 vdd1={vdd} speed=1.0 speed1={speed} tripdt=5e-9 tripdt1={tripdt}
+.param td1=1e-9*(125-40-10)*5/vdd1*speed1
 *
 XIN1  A Ai  VDD VGND  CD40_IN_1  vdd2={vdd1}  speed2={speed1}  tripdt2={tripdt1}
 XIN2  B Bi  VDD VGND  CD40_IN_1  vdd2={vdd1}  speed2={speed1}  tripdt2={tripdt1}
@@ -310,8 +310,8 @@ XOUT  Yi Y  VDD VGND  CD40_OUT_1X  vdd2={vdd1} speed2={speed1}  tripdt2={tripdt1
 * 4-input NAND gate
 * tpd 125n
 * tr 100n
-.SUBCKT CD4012B  A B C D Y  VDD VGND  vdd1={vdd} speed1={speed} tripdt1={tripdt}
-.param td1=1e-9*(125-40-10)*5/{vdd1}*{speed1}
+.SUBCKT CD4012B A B C D Y VDD VGND vdd=5 vdd1={vdd} speed=1.0 speed1={speed} tripdt=5e-9 tripdt1={tripdt}
+.param td1=1e-9*(125-40-10)*5/vdd1*speed1
 *
 XIN1  A Ai  VDD VGND  CD40_IN_1  vdd2={vdd1}  speed2={speed1}  tripdt2={tripdt1}
 XIN2  B Bi  VDD VGND  CD40_IN_1  vdd2={vdd1}  speed2={speed1}  tripdt2={tripdt1}
@@ -332,11 +332,11 @@ XOUT  Yn Y  VDD VGND  CD40_OUT_1X  vdd2={vdd1} speed2={speed1}  tripdt2={tripdt1
 * D->CP Ts 20n
 * D->CP Th 0n
 * R,S Trem 40n
-.SUBCKT CD4013B  S C D R Q QN  VDD VGND  vdd1={vdd} speed1={speed} tripdt1={tripdt}
-.param td1=1e-9*(150-10-40-10)*5/{vdd1}*{speed1}
-.param td2=1e-9*(150-10-40-10)*5/{vdd1}*{speed1}
-.param td3=1e-9*(150+20-10-40-10)*5/{vdd1}*{speed1}
-.param td4=1e-9*(10)*5/{vdd1}*{speed1}
+.SUBCKT CD4013B S C D R Q QN VDD VGND vdd=5 vdd1={vdd} speed=1.0 speed1={speed} tripdt=5e-9 tripdt1={tripdt}
+.param td1=1e-9*(150-10-40-10)*5/vdd1*speed1
+.param td2=1e-9*(150-10-40-10)*5/vdd1*speed1
+.param td3=1e-9*(150+20-10-40-10)*5/vdd1*speed1
+.param td4=1e-9*(10)*5/vdd1*speed1
 *
 XIN1  S Si  VDD VGND  CD40_IN_1  vdd2={vdd1}  speed2={speed1}  tripdt2={tripdt1}
 XIN2  C Ci  VDD VGND  CD40_IN_1  vdd2={vdd1}  speed2={speed1}  tripdt2={tripdt1}
@@ -358,9 +358,9 @@ XOUT2  QNi QN  VDD VGND  CD40_OUT_1X  vdd2={vdd1} speed2={speed1}  tripdt2={trip
 * 5-stage Johnson counter
 * tpd 120ns
 * tr 100n
-.SUBCKT CD4017B  MR CP1 CP0 O0 O1 O2 O3 O4 O5 O6 O7 O8 O9 O59  VDD VGND  vdd1={vdd} speed1={speed} tripdt1={tripdt}
-.param td1=1e-9*(120-40-10)*5/{vdd1}*{speed1}
-.param td4=1e-9*(10)*5/{vdd1}*{speed1}
+.SUBCKT CD4017B MR CP1 CP0 O0 O1 O2 O3 O4 O5 O6 O7 O8 O9 O59 VDD VGND vdd=5 vdd1={vdd} speed=1.0 speed1={speed} tripdt=5e-9 tripdt1={tripdt}
+.param td1=1e-9*(120-40-10)*5/vdd1*speed1
+.param td4=1e-9*(10)*5/vdd1*speed1
 *
 XIN1  MR  MRi   VDD VGND  CD40_IN_1  vdd2={vdd1}  speed2={speed1}  tripdt2={tripdt1}
 XIN2  CP1 CP1i  VDD VGND  CD40_IN_1  vdd2={vdd1}  speed2={speed1}  tripdt2={tripdt1}
@@ -410,11 +410,11 @@ XOUT59  O59n O59  VDD VGND  CD40_OUT_1X  vdd2={vdd1} speed2={speed1}  tripdt2={t
 * CP->Q1 tpd 180ns
 * Qn->Qn+1 tpd=90n
 * R->Q tpd=140ns
-.SUBCKT CD4020B  MR CP Q1 Q4 Q5 Q6 Q7 Q8 Q9 Q10 Q11 Q12 Q13 Q14  VDD VGND  vdd1={vdd} speed1={speed} tripdt1={tripdt}
-.param td1=1e-9*(180-90-40-10)*5/{vdd1}*{speed1}
+.SUBCKT CD4020B MR CP Q1 Q4 Q5 Q6 Q7 Q8 Q9 Q10 Q11 Q12 Q13 Q14 VDD VGND vdd=5 vdd1={vdd} speed=1.0 speed1={speed} tripdt=5e-9 tripdt1={tripdt}
+.param td1=1e-9*(180-90-40-10)*5/vdd1*speed1
 *.param td2=1e-9*(140-90-40-10)*5/{vdd1}*{speed1}
 .param td2=0
-.param td3=1e-9*(90)*5/{vdd1}*{speed1}
+.param td3=1e-9*(90)*5/vdd1*speed1
 *
 XIN1  MR  MRi  VDD VGND  CD40_IN_1  vdd2={vdd1}  speed2={speed1}  tripdt2={tripdt1}
 XIN2  CP  CPi  VDD VGND  CD40_IN_1  vdd2={vdd1}  speed2={speed1}  tripdt2={tripdt1}
@@ -458,8 +458,8 @@ XOUT14 Q14p Q14  VDD VGND  CD40_OUT_1X  vdd2={vdd1} speed2={speed1}  tripdt2={tr
 * 3-input NAND gate
 * tpd 125n
 * tr 100n
-.SUBCKT CD4023B  A B C Y  VDD VGND  vdd1={vdd} speed1={speed} tripdt1={tripdt}
-.param td1=1e-9*(125-40-10)*5/{vdd1}*{speed1}
+.SUBCKT CD4023B A B C Y VDD VGND vdd=5 vdd1={vdd} speed=1.0 speed1={speed} tripdt=5e-9 tripdt1={tripdt}
+.param td1=1e-9*(125-40-10)*5/vdd1*speed1
 *
 XIN1  A Ai  VDD VGND  CD40_IN_1  vdd2={vdd1}  speed2={speed1}  tripdt2={tripdt1}
 XIN2  B Bi  VDD VGND  CD40_IN_1  vdd2={vdd1}  speed2={speed1}  tripdt2={tripdt1}
@@ -477,11 +477,11 @@ XOUT  Yi Y  VDD VGND  CD40_OUT_1X  vdd2={vdd1} speed2={speed1}  tripdt2={tripdt1
 * Qn->Qn+1 tpd=90n
 * R->Q tpd=140ns
 * tr 100n
-.SUBCKT CD4024B  MR CP Q1 Q2 Q3 Q4 Q5 Q6 Q7  VDD VGND  vdd1={vdd} speed1={speed} tripdt1={tripdt}
-.param td1=1e-9*(180-90-40-10)*5/{vdd1}*{speed1}
+.SUBCKT CD4024B MR CP Q1 Q2 Q3 Q4 Q5 Q6 Q7 VDD VGND vdd=5 vdd1={vdd} speed=1.0 speed1={speed} tripdt=5e-9 tripdt1={tripdt}
+.param td1=1e-9*(180-90-40-10)*5/vdd1*speed1
 *.param td2=1e-9*(140-90-40-10)*5/{vdd1}*{speed1}
 .param td2=0
-.param td3=1e-9*(90)*5/{vdd1}*{speed1}
+.param td3=1e-9*(90)*5/vdd1*speed1
 *
 XIN1  MR  MRi  VDD VGND  CD40_IN_1  vdd2={vdd1}  speed2={speed1}  tripdt2={tripdt1}
 XIN2  CP  CPi  VDD VGND  CD40_IN_1  vdd2={vdd1}  speed2={speed1}  tripdt2={tripdt1}
@@ -513,8 +513,8 @@ XOUT7  Q7p  Q7   VDD VGND  CD40_OUT_1X  vdd2={vdd1} speed2={speed1}  tripdt2={tr
 * 3-input NOR gate
 * tpd 125n
 * tr 100n
-.SUBCKT CD4025B  A B C Y  VDD VGND  vdd1={vdd} speed1={speed} tripdt1={tripdt}
-.param td1=1e-9*(125-40-10)*5/{vdd1}*{speed1}
+.SUBCKT CD4025B A B C Y VDD VGND vdd=5 vdd1={vdd} speed=1.0 speed1={speed} tripdt=5e-9 tripdt1={tripdt}
+.param td1=1e-9*(125-40-10)*5/vdd1*speed1
 *
 XIN1  A Ai  VDD VGND  CD40_IN_1  vdd2={vdd1}  speed2={speed1}  tripdt2={tripdt1}
 XIN2  B Bi  VDD VGND  CD40_IN_1  vdd2={vdd1}  speed2={speed1}  tripdt2={tripdt1}
@@ -533,11 +533,11 @@ XOUT  Yi Y  VDD VGND  CD40_OUT_1X  vdd2={vdd1} speed2={speed1}  tripdt2={tripdt1
 * CP/R/S Tw 70n
 * D->CP Ts 75n
 * D->CP Th 0n
-.SUBCKT CD4027B  S J C K R Q QN  VDD VGND  vdd1={vdd} speed1={speed} tripdt1={tripdt}
-.param td1=1e-9*(150-10-40-10)*5/{vdd1}*{speed1}
-.param td2=1e-9*(150-10-40-10)*5/{vdd1}*{speed1}
-.param td3=1e-9*(150+75-10-40-10)*5/{vdd1}*{speed1}
-.param td4=1e-9*(10)*5/{vdd1}*{speed1}
+.SUBCKT CD4027B S J C K R Q QN VDD VGND vdd=5 vdd1={vdd} speed=1.0 speed1={speed} tripdt=5e-9 tripdt1={tripdt}
+.param td1=1e-9*(150-10-40-10)*5/vdd1*speed1
+.param td2=1e-9*(150-10-40-10)*5/vdd1*speed1
+.param td3=1e-9*(150+75-10-40-10)*5/vdd1*speed1
+.param td4=1e-9*(10)*5/vdd1*speed1
 *
 XIN1  S Si  VDD VGND  CD40_IN_1  vdd2={vdd1}  speed2={speed1}  tripdt2={tripdt1}
 XIN2  C Ci  VDD VGND  CD40_IN_1  vdd2={vdd1}  speed2={speed1}  tripdt2={tripdt1}
@@ -569,8 +569,8 @@ XOUT2  QNi QN  VDD VGND  CD40_OUT_1X  vdd2={vdd1} speed2={speed1}  tripdt2={trip
 * 2-input exclusive OR-gate
 * tpd 140n
 * tr 100n
-.SUBCKT CD4030B  A B Y  VDD VGND  vdd1={vdd} speed1={speed} tripdt1={tripdt}
-.param td1=1e-9*(140-40-10)*5/{vdd1}*{speed1}
+.SUBCKT CD4030B A B Y VDD VGND vdd=5 vdd1={vdd} speed=1.0 speed1={speed} tripdt=5e-9 tripdt1={tripdt}
+.param td1=1e-9*(140-40-10)*5/vdd1*speed1
 *
 XIN1  A Ai  VDD VGND  CD40_IN_1  vdd2={vdd1}  speed2={speed1}  tripdt2={tripdt1}
 XIN2  B Bi  VDD VGND  CD40_IN_1  vdd2={vdd1}  speed2={speed1}  tripdt2={tripdt1}
@@ -586,11 +586,11 @@ XOUT  Yp Y  VDD VGND  CD40_OUT_1X  vdd2={vdd1} speed2={speed1}  tripdt2={tripdt1
 * CP->Q1 tpd 180ns
 * Qn->Qn+1 tpd=90n
 * R->Q tpd=140ns
-.SUBCKT CD4040B  MR CP Q1 Q2 Q3 Q4 Q5 Q6 Q7 Q8 Q9 Q10 Q11 Q12  VDD VGND  vdd1={vdd} speed1={speed} tripdt1={tripdt}
-.param td1=1e-9*(180-90-40-10)*5/{vdd1}*{speed1}
+.SUBCKT CD4040B MR CP Q1 Q2 Q3 Q4 Q5 Q6 Q7 Q8 Q9 Q10 Q11 Q12 VDD VGND vdd=5 vdd1={vdd} speed=1.0 speed1={speed} tripdt=5e-9 tripdt1={tripdt}
+.param td1=1e-9*(180-90-40-10)*5/vdd1*speed1
 *.param td2=1e-9*(140-90-40-10)*5/{vdd1}*{speed1}
 .param td2=0
-.param td3=1e-9*(90)*5/{vdd1}*{speed1}
+.param td3=1e-9*(90)*5/vdd1*speed1
 *
 XIN1  MR  MRi  VDD VGND  CD40_IN_1  vdd2={vdd1}  speed2={speed1}  tripdt2={tripdt1}
 XIN2  CP  CPi  VDD VGND  CD40_IN_1  vdd2={vdd1}  speed2={speed1}  tripdt2={tripdt1}
@@ -647,15 +647,15 @@ XOUT12 Q12p Q12  VDD VGND  CD40_OUT_1X  vdd2={vdd1} speed2={speed1}  tripdt2={tr
 *
 * CD4047B Monostable/astable multivibrator (retriggerable)
 *
-.SUBCKT CD4047B xCt xRt xRCt xAstable _xAstable xNegTrig xPosTrig xReTrig xExtRst xQ _xQ xOscOut VDD VGND  vdd1={vdd} speed1={speed} tripdt1={tripdt}
+.SUBCKT CD4047B xCt xRt xRCt xAstable _xAstable xNegTrig xPosTrig xReTrig xExtRst xQ _xQ xOscOut VDD VGND vdd=5 vdd1={vdd} speed=1.0 speed1={speed} tripdt=5e-9 tripdt1={tripdt}
 *
 * Internal propagation delays. These were set to approximate IC input-output delays from datasheet.
 *
-.param tdFlop=      50e-9*5/{vdd1}*{speed1}
-.param tdNand=      35e-9*5/{vdd1}*{speed1}
-.param tdNor=       35e-9*5/{vdd1}*{speed1}
-.param tdBuf=       10e-9*5/{vdd1}*{speed1}
-.param tdExtRstBuf= 30e-9*5/{vdd1}*{speed1}
+.param tdFlop=      50e-9*5/vdd1*speed1
+.param tdNand=      35e-9*5/vdd1*speed1
+.param tdNor=       35e-9*5/vdd1*speed1
+.param tdBuf=       10e-9*5/vdd1*speed1
+.param tdExtRstBuf= 30e-9*5/vdd1*speed1
 *
 * Capacitor discharged at startup. Otherwise LTSpice requires UIC flag to run.
 *
@@ -731,8 +731,8 @@ XOut5 _iQ      _xQ        VDD VGND CD40_OUT_1X vdd2={vdd1} speed2={speed1} tripd
 * Inverting buffer
 * tpd 100n
 * tr 160n/60n
-.SUBCKT CD4049B  A Y  VDD VGND  vdd1={vdd} speed1={speed} tripdt1={tripdt}
-.param td1=1e-9*(100-40-10)*5/{vdd1}*{speed1}
+.SUBCKT CD4049B A Y VDD VGND vdd=5 vdd1={vdd} speed=1.0 speed1={speed} tripdt=5e-9 tripdt1={tripdt}
+.param td1=1e-9*(100-40-10)*5/vdd1*speed1
 *
 XIN1  A Ai  VDD VGND  CD40_IN_1  vdd2={vdd1}  speed2={speed1}  tripdt2={tripdt1}
 *
@@ -746,8 +746,8 @@ XOUT  Yn Y  VDD VGND  CD40_OUT_2X  vdd2={vdd1} speed2={speed1}  tripdt2={tripdt1
 * Non-inverting buffer
 * tpd 100n
 * tr 160n/60n
-.SUBCKT CD4050B  A Y  VDD VGND  vdd1={vdd} speed1={speed} tripdt1={tripdt}
-.param td1=1e-9*(100-40-10)*5/{vdd1}*{speed1}
+.SUBCKT CD4050B A Y VDD VGND vdd=5 vdd1={vdd} speed=1.0 speed1={speed} tripdt=5e-9 tripdt1={tripdt}
+.param td1=1e-9*(100-40-10)*5/vdd1*speed1
 *
 XIN1  A Ai  VDD VGND  CD40_IN_1  vdd2={vdd1}  speed2={speed1}  tripdt2={tripdt1}
 *
@@ -761,8 +761,8 @@ XOUT  Yp Y  VDD VGND  CD40_OUT_2X  vdd2={vdd1} speed2={speed1}  tripdt2={tripdt1
 * 8-input NAND-gate
 * tpd 150n
 * tr 100n
-.SUBCKT CD4068B  A B C D E F G H YB Y  VDD VGND  vdd1={vdd} speed1={speed} tripdt1={tripdt}
-.param td1=1e-9*(150-40-10)*5/{vdd1}*{speed1}
+.SUBCKT CD4068B A B C D E F G H YB Y VDD VGND vdd=5 vdd1={vdd} speed=1.0 speed1={speed} tripdt=5e-9 tripdt1={tripdt}
+.param td1=1e-9*(150-40-10)*5/vdd1*speed1
 *
 XIN1  A Ai  VDD VGND  CD40_IN_1  vdd2={vdd1}  speed2={speed1}  tripdt2={tripdt1}
 XIN2  B Bi  VDD VGND  CD40_IN_1  vdd2={vdd1}  speed2={speed1}  tripdt2={tripdt1}
@@ -786,8 +786,8 @@ XOUT2  Yp Y   VDD VGND  CD40_OUT_1X  vdd2={vdd1} speed2={speed1}  tripdt2={tripd
 * 2-input exclusive OR-gate
 * tpd 140n
 * tr 100n
-.SUBCKT CD4070B  A B Y  VDD VGND  vdd1={vdd} speed1={speed} tripdt1={tripdt}
-.param td1=1e-9*(140-40-10)*5/{vdd1}*{speed1}
+.SUBCKT CD4070B A B Y VDD VGND vdd=5 vdd1={vdd} speed=1.0 speed1={speed} tripdt=5e-9 tripdt1={tripdt}
+.param td1=1e-9*(140-40-10)*5/vdd1*speed1
 *
 XIN1  A Ai  VDD VGND  CD40_IN_1  vdd2={vdd1}  speed2={speed1}  tripdt2={tripdt1}
 XIN2  B Bi  VDD VGND  CD40_IN_1  vdd2={vdd1}  speed2={speed1}  tripdt2={tripdt1}
@@ -802,8 +802,8 @@ XOUT  Yp Y  VDD VGND  CD40_OUT_1X  vdd2={vdd1} speed2={speed1}  tripdt2={tripdt1
 * 2-input OR gate
 * tpd 125n
 * tr 100n
-.SUBCKT CD4071B  A B Y  VDD VGND  vdd1={vdd} speed1={speed} tripdt1={tripdt}
-.param td1=1e-9*(125-40-10)*5/{vdd1}*{speed1}
+.SUBCKT CD4071B A B Y VDD VGND vdd=5 vdd1={vdd} speed=1.0 speed1={speed} tripdt=5e-9 tripdt1={tripdt}
+.param td1=1e-9*(125-40-10)*5/vdd1*speed1
 *
 XIN1  A Ai  VDD VGND  CD40_IN_1  vdd2={vdd1}  speed2={speed1}  tripdt2={tripdt1}
 XIN2  B Bi  VDD VGND  CD40_IN_1  vdd2={vdd1}  speed2={speed1}  tripdt2={tripdt1}
@@ -818,8 +818,8 @@ XOUT  Yp Y  VDD VGND  CD40_OUT_1X  vdd2={vdd1} speed2={speed1}  tripdt2={tripdt1
 * 4-input OR gate
 * tpd 125n
 * tr 100n
-.SUBCKT CD4072B  A B C D Y  VDD VGND  vdd1={vdd} speed1={speed} tripdt1={tripdt}
-.param td1=1e-9*(125-40-10)*5/{vdd1}*{speed1}
+.SUBCKT CD4072B A B C D Y VDD VGND vdd=5 vdd1={vdd} speed=1.0 speed1={speed} tripdt=5e-9 tripdt1={tripdt}
+.param td1=1e-9*(125-40-10)*5/vdd1*speed1
 *
 XIN1  A Ai  VDD VGND  CD40_IN_1  vdd2={vdd1}  speed2={speed1}  tripdt2={tripdt1}
 XIN2  B Bi  VDD VGND  CD40_IN_1  vdd2={vdd1}  speed2={speed1}  tripdt2={tripdt1}
@@ -836,8 +836,8 @@ XOUT  Yp Y  VDD VGND  CD40_OUT_1X  vdd2={vdd1} speed2={speed1}  tripdt2={tripdt1
 * 3-input AND gate
 * tpd 125n
 * tr 100n
-.SUBCKT CD4073B  A B C Y  VDD VGND  vdd1={vdd} speed1={speed} tripdt1={tripdt}
-.param td1=1e-9*(125-40-10)*5/{vdd1}*{speed1}
+.SUBCKT CD4073B A B C Y VDD VGND vdd=5 vdd1={vdd} speed=1.0 speed1={speed} tripdt=5e-9 tripdt1={tripdt}
+.param td1=1e-9*(125-40-10)*5/vdd1*speed1
 *
 XIN1  A Ai  VDD VGND  CD40_IN_1  vdd2={vdd1}  speed2={speed1}  tripdt2={tripdt1}
 XIN2  B Bi  VDD VGND  CD40_IN_1  vdd2={vdd1}  speed2={speed1}  tripdt2={tripdt1}
@@ -853,8 +853,8 @@ XOUT  Yp Y  VDD VGND  CD40_OUT_1X  vdd2={vdd1} speed2={speed1}  tripdt2={tripdt1
 * 3-input OR gate
 * tpd 125n
 * tr 100n
-.SUBCKT CD4075B  A B C Y  VDD VGND  vdd1={vdd} speed1={speed} tripdt1={tripdt}
-.param td1=1e-9*(125-40-10)*5/{vdd1}*{speed1}
+.SUBCKT CD4075B A B C Y VDD VGND vdd=5 vdd1={vdd} speed=1.0 speed1={speed} tripdt=5e-9 tripdt1={tripdt}
+.param td1=1e-9*(125-40-10)*5/vdd1*speed1
 *
 XIN1  A Ai  VDD VGND  CD40_IN_1  vdd2={vdd1}  speed2={speed1}  tripdt2={tripdt1}
 XIN2  B Bi  VDD VGND  CD40_IN_1  vdd2={vdd1}  speed2={speed1}  tripdt2={tripdt1}
@@ -870,8 +870,8 @@ XOUT  Yp Y  VDD VGND  CD40_OUT_1X  vdd2={vdd1} speed2={speed1}  tripdt2={tripdt1
 * 2-input exclusive OR-gate
 * tpd 140nn
 * tr 100n
-.SUBCKT CD4077B  A B Y  VDD VGND  vdd1={vdd} speed1={speed} tripdt1={tripdt}
-.param td1=1e-9*(140-40-10)*5/{vdd1}*{speed1}
+.SUBCKT CD4077B A B Y VDD VGND vdd=5 vdd1={vdd} speed=1.0 speed1={speed} tripdt=5e-9 tripdt1={tripdt}
+.param td1=1e-9*(140-40-10)*5/vdd1*speed1
 *
 XIN1  A Ai  VDD VGND  CD40_IN_1  vdd2={vdd1}  speed2={speed1}  tripdt2={tripdt1}
 XIN2  B Bi  VDD VGND  CD40_IN_1  vdd2={vdd1}  speed2={speed1}  tripdt2={tripdt1}
@@ -886,8 +886,8 @@ XOUT  Yn Y  VDD VGND  CD40_OUT_1X  vdd2={vdd1} speed2={speed1}  tripdt2={tripdt1
 * 2-input AND gate
 * tpd 125n
 * tr 100n
-.SUBCKT CD4081B  A B Y  VDD VGND  vdd1={vdd} speed1={speed} tripdt1={tripdt}
-.param td1=1e-9*(125-40-10)*5/{vdd1}*{speed1}
+.SUBCKT CD4081B A B Y VDD VGND vdd=5 vdd1={vdd} speed=1.0 speed1={speed} tripdt=5e-9 tripdt1={tripdt}
+.param td1=1e-9*(125-40-10)*5/vdd1*speed1
 *
 XIN1  A Ai  VDD VGND  CD40_IN_1  vdd2={vdd1}  speed2={speed1}  tripdt2={tripdt1}
 XIN2  B Bi  VDD VGND  CD40_IN_1  vdd2={vdd1}  speed2={speed1}  tripdt2={tripdt1}
@@ -903,8 +903,8 @@ XOUT  Yp Y  VDD VGND  CD40_OUT_1X  vdd2={vdd1} speed2={speed1}  tripdt2={tripdt1
 * 4-input AND gate
 * tpd 125n
 * tr 100n
-.SUBCKT CD4082B  A B C D Y  VDD VGND  vdd1={vdd} speed1={speed} tripdt1={tripdt}
-.param td1=1e-9*(125-40-10)*5/{vdd1}*{speed1}
+.SUBCKT CD4082B A B C D Y VDD VGND vdd=5 vdd1={vdd} speed=1.0 speed1={speed} tripdt=5e-9 tripdt1={tripdt}
+.param td1=1e-9*(125-40-10)*5/vdd1*speed1
 *
 XIN1  A Ai  VDD VGND  CD40_IN_1  vdd2={vdd1}  speed2={speed1}  tripdt2={tripdt1}
 XIN2  B Bi  VDD VGND  CD40_IN_1  vdd2={vdd1}  speed2={speed1}  tripdt2={tripdt1}
@@ -921,8 +921,8 @@ XOUT  Yp Y  VDD VGND  CD40_OUT_1X  vdd2={vdd1} speed2={speed1}  tripdt2={tripdt1
 * 2-input NAND SCHMITT trigger
 * tpd 180n
 * tr 100n
-.SUBCKT CD4093B  A B Y  VDD VGND  vdd1={vdd} speed1={speed} tripdt1={tripdt}
-.param td1=1e-9*(180-40-10)*5/{vdd1}*{speed1}
+.SUBCKT CD4093B A B Y VDD VGND vdd=5 vdd1={vdd} speed=1.0 speed1={speed} tripdt=5e-9 tripdt1={tripdt}
+.param td1=1e-9*(180-40-10)*5/vdd1*speed1
 *
 XIN1  A Ai  VDD VGND  CD40_IN_S_1  vdd2={vdd1}  speed2={speed1}  tripdt2={tripdt1}
 XIN2  B Bi  VDD VGND  CD40_IN_S_1  vdd2={vdd1}  speed2={speed1}  tripdt2={tripdt1}
@@ -937,8 +937,8 @@ XOUT  Yn Y  VDD VGND  CD40_OUT_1X  vdd2={vdd1} speed2={speed1}  tripdt2={tripdt1
 * Inverting buffer with Schmitt trigger input
 * tpd 100n
 * tr 160n/60n
-.SUBCKT CD40106B  A Y  VDD VGND  vdd1={vdd} speed1={speed} tripdt1={tripdt}
-.param td1=1e-9*(100-40-10)*5/{vdd1}*{speed1}
+.SUBCKT CD40106B A Y VDD VGND vdd=5 vdd1={vdd} speed=1.0 speed1={speed} tripdt=5e-9 tripdt1={tripdt}
+.param td1=1e-9*(100-40-10)*5/vdd1*speed1
 *
 XIN1  A Ai  VDD VGND  CD40_IN_S_1  vdd2={vdd1}  speed2={speed1}  tripdt2={tripdt1}
 *
@@ -954,10 +954,10 @@ XOUT  Yn Y  VDD VGND  CD40_OUT_2X  vdd2={vdd1} speed2={speed1}  tripdt2={tripdt1
 * tpd R,A,B->Q     300n
 * tr 100n
 * Tpulse 75n, C=0, Rext=5k
-.SUBCKT CD14538B  A B CLR  CGND RC  Q QN  VDD VGND  vdd1={vdd} speed1={speed} tripdt1={tripdt}
-.param egain=1/{vdd1}
-.param td5=1e-9*(50)*5.0/{vdd1}*{speed1}
-.param td2=1e-9*(20)*5.0/{vdd1}*{speed1}
+.SUBCKT CD14538B A B CLR CGND RC Q QN VDD VGND vdd=5 vdd1={vdd} speed=1.0 speed1={speed} tripdt=5e-9 tripdt1={tripdt}
+.param egain=1/vdd1
+.param td5=1e-9*(50)*5.0/vdd1*speed1
+.param td2=1e-9*(20)*5.0/vdd1*speed1
 *
 XINA    A   Ai    VDD VGND  CD40_IN_1  vdd2={vdd1}  speed2={speed1}  tripdt2={tripdt1}
 XINB    B   Bi    VDD VGND  CD40_IN_1  vdd2={vdd1}  speed2={speed1}  tripdt2={tripdt1}
@@ -1019,10 +1019,10 @@ XOUT1  QNi QN  VDD VGND  CD40_OUT_1X  VDD2={VDD1} speed2={speed1}  tripdt2={trip
 * tpd R,A,B->Q     300n
 * tr 100n
 * Tpulse 75n, C=0, Rext=5k
-.SUBCKT CD4538B  A B CLR  CGND RC  Q QN  VDD VGND  vdd1={vdd} speed1={speed} tripdt1={tripdt}
-.param egain=1/{vdd1}
-.param td5=1e-9*(50)*5.0/{vdd1}*{speed1}
-.param td2=1e-9*(20)*5.0/{vdd1}*{speed1}
+.SUBCKT CD4538B A B CLR CGND RC Q QN VDD VGND vdd=5 vdd1={vdd} speed=1.0 speed1={speed} tripdt=5e-9 tripdt1={tripdt}
+.param egain=1/vdd1
+.param td5=1e-9*(50)*5.0/vdd1*speed1
+.param td2=1e-9*(20)*5.0/vdd1*speed1
 *
 XINA    A   Ai    VDD VGND  CD40_IN_1  vdd2={vdd1}  speed2={speed1}  tripdt2={tripdt1}
 XINB    B   Bi    VDD VGND  CD40_IN_1  vdd2={vdd1}  speed2={speed1}  tripdt2={tripdt1}
@@ -1086,9 +1086,9 @@ XOUT1  QNi QN  VDD VGND  CD40_OUT_1X  VDD2={VDD1} speed2={speed1}  tripdt2={trip
 *
 .MODEL CD40DIO1 D(Is=1e-12 Rs=100)
 *
-.SUBCKT  CD40_IN_0  in out  VDD VGND  vdd3={vdd2} speed3={speed2}  tripdt3={tripdt2}
+.SUBCKT  CD40_IN_0 in out VDD VGND vdd2=5 vdd3={vdd2} speed2=1.0 speed3={speed2} tripdt2=5e-9 tripdt3={tripdt2}
 .param vt1=0.5
-.param gain=(1/{vdd3})
+.param gain=(1/vdd3)
 *
 *D1 0   in  CD40DIO1
 *D2 in VDD  CD40DIO1
@@ -1099,13 +1099,13 @@ AE1  out20 0 0 0 0  0 out 0  BUF  ref={vt1}  vhigh=1  tripdt={tripdt3}
 .ends
 *
 *
-.SUBCKT  CD40_IN_1  in out  VDD VGND  vdd3={vdd2} speed3={speed2}  tripdt3={tripdt2}
+.SUBCKT  CD40_IN_1 in out VDD VGND vdd2=5 vdd3={vdd2} speed2=1.0 speed3={speed2} tripdt2=5e-9 tripdt3={tripdt2}
 * 3ns input delay
 *.param Cval = 0.55e-12*4/({vdd3}-0.5)*{speed3}
 * 10ns delay @5V
-.param Cval = 1.8e-12*5/{vdd3}*{speed3}
+.param Cval = 1.8e-12*5/vdd3*speed3
 .param vt1=0.5
-.param gain=(1/{vdd3})
+.param gain=(1/vdd3)
 *
 *D1 0   in  CD40DIO1
 *D2 in VDD  CD40DIO1
@@ -1120,11 +1120,11 @@ AE1  out20 0 0 0 0  0 out 0  BUF  ref={vt1}  vhigh=1  tripdt={tripdt3}
 *
 *
 * Schmitt-input; 2.9V/2.1V @5V
-.SUBCKT  CD40_IN_S_1  in out  VDD VGND  vdd3={vdd2}  speed3={speed2}  tripdt3={tripdt2}
-.param Cval = 1.8e-12*5/{vdd3}*{speed3}
+.SUBCKT  CD40_IN_S_1 in out VDD VGND vdd2=5 vdd3={vdd2} speed2=1.0 speed3={speed2} tripdt2=5e-9 tripdt3={tripdt2}
+.param Cval = 1.8e-12*5/vdd3*speed3
 .param vt1=2.5/5
 .param vh1=0.4/5
-.param gain=(1/{vdd3})
+.param gain=(1/vdd3)
 *
 *D1 0   in  CD40DIO1
 *D2 in VDD  CD40DIO1
@@ -1150,9 +1150,9 @@ AE1  out20 0 0 0 0  0 out 0  SCHMITT  vt={vt1} vh={vh1} vhigh=1  tripdt={tripdt3
 .MODEL DIO2 D(Is=1e-12 Rs=10)
 *
 * Standard output driver
-.SUBCKT  CD40_OUT_1X  in out  VDD VGND  vdd3={vdd2} speed3={speed2}  tripdt3={tripdt2}
-.param trise1=80e-9*5.0/{vdd3}*{speed3}
-.param Rout=500*5.0/{vdd3}*{speed3}
+.SUBCKT  CD40_OUT_1X in out VDD VGND vdd2=5 vdd3={vdd2} speed2=1.0 speed3={speed2} tripdt2=5e-9 tripdt3={tripdt2}
+.param trise1=80e-9*5.0/vdd3*speed3
+.param Rout=500*5.0/vdd3*speed3
 *
 AE1  in 0 0 0 0  0 out10 0  BUF  tripdt={tripdt3}  trise={trise1}
 *
@@ -1166,9 +1166,9 @@ Rout out20 out {Rout}
 *
 *
 * Strong output driver
-.SUBCKT  CD40_OUT_2X  in out  VDD VGND  vdd3={vdd2} speed3={speed2}  tripdt3={tripdt2}
-.param trise1=80e-9*5/{vdd3}*{speed3}
-.param Rout=250*5.0/{vdd3}*{speed3}
+.SUBCKT  CD40_OUT_2X in out VDD VGND vdd2=5 vdd3={vdd2} speed2=1.0 speed3={speed2} tripdt2=5e-9 tripdt3={tripdt2}
+.param trise1=80e-9*5/vdd3*speed3
+.param Rout=250*5.0/vdd3*speed3
 *
 AE1  in 0 0 0 0  0 out10 0  BUF  tripdt={tripdt3}  trise={trise1}
 *
@@ -1182,9 +1182,9 @@ Rout  out20 out {Rout}
 *
 *
 * Tristate output driver
-.SUBCKT  CD40_OUT_TS_2X  en in out  VDD VGND  vdd3={vdd2} speed3={speed2}  tripdt3={tripdt2}
-.param trise1=80e-9*5.0/{vdd3}*{speed3}
-.param Rout=250*5/{vdd3}*{speed3}
+.SUBCKT  CD40_OUT_TS_2X en in out VDD VGND vdd2=5 vdd3={vdd2} speed2=1.0 speed3={speed2} tripdt2=5e-9 tripdt3={tripdt2}
+.param trise1=80e-9*5.0/vdd3*speed3
+.param Rout=250*5/vdd3*speed3
 *
 A1  in 0 0 0 0  0 out10 0  BUF  tripdt={tripdt3}  trise={trise1}
 *
@@ -1199,9 +1199,9 @@ SW1  out30 out en 0 SW_HC1
 *
 *
 * Open drain output driver
-.SUBCKT  CD40_OUT_OD_1X  in out  VDD VGND  vdd3={vdd2} speed3={speed2}  tripdt3={tripdt2}
-.param trise1=80e-9*5/{vdd3}*{speed3}
-.param Rout=500*5/{vdd3}*{speed3}
+.SUBCKT  CD40_OUT_OD_1X in out VDD VGND vdd2=5 vdd3={vdd2} speed2=1.0 speed3={speed2} tripdt2=5e-9 tripdt3={tripdt2}
+.param trise1=80e-9*5/vdd3*speed3
+.param Rout=500*5/vdd3*speed3
 *
 A1  in 0 0 0 0   out10 0 0  BUF  tripdt={tripdt3}  trise={trise1}
 *
@@ -1220,7 +1220,7 @@ SW1  out30 out out10 0 SW_HC2
 *
 *
 * 4 bit synchronous binary/dec up/down counter with asynchronous load
-.SUBCKT CD4029B  _CIN U_D PE CLK P1 P2 P3 P4 Q1 Q2 Q3 Q4 _COUT B_D VDD VGND  vdd1={vdd} speed1={speed}  tripdt1={tripdt}
+.SUBCKT CD4029B _CIN U_D PE CLK P1 P2 P3 P4 Q1 Q2 Q3 Q4 _COUT B_D VDD VGND vdd=5 vdd1={vdd} speed=1.0 speed1={speed} tripdt=5e-9 tripdt1={tripdt}
 * Fairchild CD4029BC http://www.rzbd.haw-hamburg.de/~m4100009/CD4029.pdf
 * BINARY/DEC-pin CD4029 only
 * RESET-pin instead of BINARY/DEC-pin: CD4510, CD4516 only
@@ -1248,7 +1248,7 @@ XOUT5  _COUTi _COUT VDD VGND  CD40_OUT_1X  vdd2={vdd1} speed2={speed1}  tripdt2=
 *
 .ends CD4029B
 *
-.SUBCKT CD4029_i _CIN UP_DOWN PE CLK P1 P2 P3 P4 Q1 Q2 Q3 Q4 _COUT BIN_DEC tripdt1={tripdt1a} td1={td1a} td2={td2a}
+.SUBCKT CD4029_i _CIN UP_DOWN PE CLK P1 P2 P3 P4 Q1 Q2 Q3 Q4 _COUT BIN_DEC tripdt1a=5e-9 tripdt1={tripdt1a} td1a=1e-9 td1={td1a} td2a=1e-9 td2={td2a}
 R9 RESET 0 1k
 A4 N032 0 CLK1 N004 N063 N047 N011 0 DFLOP tripdt={tripdt1} td={td1}
 A7 0 N031 0 N047 0 0 N041 0 AND tripdt={tripdt1} td={td2}
@@ -1333,7 +1333,7 @@ A77 0 P1 0 RES1 0 _P1 0 0 AND tripdt={tripdt1} td={td2}
 *
 *
 * 4 bit synchronous decade up/down counter with asynchronous load
-.SUBCKT CD4510B  _CIN U_D PE CLK P1 P2 P3 P4 Q1 Q2 Q3 Q4 _COUT RST VDD VGND  vdd1={vdd} speed1={speed}  tripdt1={tripdt}
+.SUBCKT CD4510B _CIN U_D PE CLK P1 P2 P3 P4 Q1 Q2 Q3 Q4 _COUT RST VDD VGND vdd=5 vdd1={vdd} speed=1.0 speed1={speed} tripdt=5e-9 tripdt1={tripdt}
 * Fairchild CD4510
 * BINARY/DEC-pin CD4029 only
 * RESET-pin instead of BINARY/DEC-pin: CD4510, CD4516 only
@@ -1361,7 +1361,7 @@ XOUT5  _COUTi _COUT VDD VGND  CD40_OUT_1X  vdd2={vdd1} speed2={speed1}  tripdt2=
 *
 .ends CD4510B
 *
-.SUBCKT CD4510_i _CIN UP_DOWN PE CLK P1 P2 P3 P4 Q1 Q2 Q3 Q4 _COUT RESET tripdt1={tripdt1a} td1={td1a} td2={td2a}
+.SUBCKT CD4510_i _CIN UP_DOWN PE CLK P1 P2 P3 P4 Q1 Q2 Q3 Q4 _COUT RESET tripdt1a=5e-9 tripdt1={tripdt1a} td1a=1e-9 td1={td1a} td2a=1e-9 td2={td2a}
 R9 BIN_DEC 0 1k
 A4 N032 0 CLK1 N004 N063 N047 N011 0 DFLOP tripdt={tripdt1} td={td1}
 A7 0 N031 0 N047 0 0 N041 0 AND tripdt={tripdt1} td={td2}
@@ -1447,7 +1447,7 @@ A77 0 P1 0 RES1 0 _P1 0 0 AND tripdt={tripdt1} td={td2}
 *
 *
 * 4 bit synchronous decade up/down counter with asynchronous load
-.SUBCKT CD4516B  _CIN U_D PE CLK P1 P2 P3 P4 Q1 Q2 Q3 Q4 _COUT RST VDD VGND  vdd1={vdd} speed1={speed}  tripdt1={tripdt}
+.SUBCKT CD4516B _CIN U_D PE CLK P1 P2 P3 P4 Q1 Q2 Q3 Q4 _COUT RST VDD VGND vdd=5 vdd1={vdd} speed=1.0 speed1={speed} tripdt=5e-9 tripdt1={tripdt}
 * Fairchild CD4510
 * BINARY/DEC-pin CD4029 only
 * RESET-pin instead of BINARY/DEC-pin: CD4510, CD4516 only
@@ -1475,7 +1475,7 @@ XOUT5  _COUTi _COUT VDD VGND  CD40_OUT_1X  vdd2={vdd1} speed2={speed1}  tripdt2=
 *
 .ends CD4516B
 *
-.SUBCKT CD4516_i _CIN UP_DOWN PE CLK P1 P2 P3 P4 Q1 Q2 Q3 Q4 _COUT RESET tripdt1={tripdt1a} td1={td1a} td2={td2a}
+.SUBCKT CD4516_i _CIN UP_DOWN PE CLK P1 P2 P3 P4 Q1 Q2 Q3 Q4 _COUT RESET tripdt1a=5e-9 tripdt1={tripdt1a} td1a=1e-9 td1={td1a} td2a=1e-9 td2={td2a}
 V9 BIN_DEC 0 1
 R9 BIN_DEC 0 1k
 A4 N032 0 CLK1 N004 N063 N047 N011 0 DFLOP tripdt={tripdt1} td={td1}
