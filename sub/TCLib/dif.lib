@@ -1,0 +1,4 @@
+* SUB1: subcircuit exported from TurboSpice
+.subckt SUB1 in+ in- out
+E1 out 0 in+ in- 1
+.ends SUB1
